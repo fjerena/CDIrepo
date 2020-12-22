@@ -58,7 +58,7 @@ TIM_HandleTypeDef htim4;
 #define Delta_RPM                    100u
 
 //Global variable
-enum Interruption_type {INT_FROM_CH3, INT_FROM_CH4} int_types;
+enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
 enum Output_Level {OFF, ON} level;
 enum Event_status {EMPTY, PROGRAMMED, DONE} status;
 
@@ -101,10 +101,14 @@ typedef struct timerproperty
 	uint8_t  timer_program;
 }timer_status;
 
-timer_status request[2] = {{0,0},
+timer_status request[4] = {{0,0},
+                           {0,0},
+                           {0,0},
                            {0,0}};
 
-timer_status Pulse_Program[2] = {{0,0},
+timer_status Pulse_Program[4] = {{0,0},
+                                 {0,0},
+                                 {0,0},
                                  {0,0}};
 
 typedef struct Scheduler
@@ -168,6 +172,19 @@ void Set_Ouput_InterruptionTest(void)
 {
 	HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_6);
 }
+
+void Set_Ouput_Inversor(uint8_t Value)
+{
+	if (Value == TRUE)
+	{
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);
+	}
+	else
+	{
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_RESET);
+	}	
+}
+
 
 // A iterative binary search function. It returns 
 // location of x in given array arr[l..r] if present, 
@@ -259,6 +276,12 @@ void Update_Pulse_Program(void)
 	
 	Pulse_Program[1].counter = request[1].counter;
 	Pulse_Program[1].timer_program = EMPTY;
+	
+	Pulse_Program[2].counter = request[2].counter;
+	Pulse_Program[2].timer_program = EMPTY;
+	
+	Pulse_Program[3].counter = request[3].counter;
+	Pulse_Program[3].timer_program = EMPTY;
 }	
 
 void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, uint8_t *resp_var)
@@ -345,7 +368,7 @@ uint8_t Ignition_nTime(uint16_t eng_speed)
 
 void Set_Pulse_Program(void)
 {	
-	static uint32_t Event1, Event2;
+	static uint32_t Event1, Event2, Event3, Event4;
 	
 	scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
   scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
@@ -358,12 +381,20 @@ void Set_Pulse_Program(void)
 		scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);                            
 		Event1 = scenario.TStep*scenario.nAdv;
 		Event2 = Event1+TDuty_Trigger_const;
+		Event3 = 2618u;
+		Event4 = 5891u;
 	
-		//Event 1 - Generates Rising Edge for trigger signal using TMR3 to generate the event
+		//Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
 		request[0].counter = Event1%65536;
 	
-		//Event 2 - Generates Falling Edge for trigger signal using TMR4 to generate the event
+		//Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
 		request[1].counter = Event2%65536;	
+		
+		//Event 3 - Generates Rising Edge for trigger signal using TMR4 to generate the event
+		request[2].counter = Event3%65536;
+	
+		//Event 4 - Generates Falling Edge for trigger signal using TMR4 to generate the event
+		request[3].counter = Event4%65536;	
 	}	
 	else
 	{	
@@ -644,9 +675,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1;
+  htim4.Init.Prescaler = 55;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 1440;
+  htim4.Init.Period = 65535;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -658,7 +689,7 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  if (HAL_TIM_OC_Init(&htim4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -668,18 +699,21 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 600;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCMode = TIM_OCMODE_ACTIVE;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM4_Init 2 */
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  
   /* USER CODE END TIM4_Init 2 */
-  HAL_TIM_MspPostInit(&htim4);
 
 }
 
@@ -710,7 +744,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10 
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
                           |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -752,12 +786,12 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : PB2 PB10 PB11 PB12 
                            PB13 PB14 PB15 PB3 
-                           PB4 PB5 PB7 PB8 
-                           PB9 */
+                           PB4 PB5 PB6 PB7 
+                           PB8 PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12 
                           |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7|GPIO_PIN_8 
-                          |GPIO_PIN_9;
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
+                          |GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -769,6 +803,17 @@ static void MX_GPIO_Init(void)
 
 uint32_t pulse_phase = 1;
 
+void Program_Pulse_Inverter(void)
+{	
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[2].counter);
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
+	Pulse_Program[2].timer_program = PROGRAMMED;
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[3].counter);		
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	   
+  Pulse_Program[3].timer_program = PROGRAMMED;
+	__HAL_TIM_SET_COUNTER(&htim4,0x0);
+}
+
 void Event_Scheduler(void)
 { 
 	//Program trigger pulse (rising edge and falling edge)
@@ -777,7 +822,7 @@ void Event_Scheduler(void)
 	Pulse_Program[0].timer_program = PROGRAMMED;
 	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,Pulse_Program[1].counter);		
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);	   
-  Pulse_Program[1].timer_program = PROGRAMMED;
+  Pulse_Program[1].timer_program = PROGRAMMED;	
 }
 
 void Timer_Overflow_Event(void)
@@ -815,7 +860,7 @@ void Rising_Edge_Event(void)
 	else
 	{
 		HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_3);
-		HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);
+		HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);    	
   }		
 }
 
@@ -833,6 +878,8 @@ void Falling_Edge_Event(void)
 		counter+=TDutyTriggerK;		   
 		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);		
 	  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
+		
+		Program_Pulse_Inverter();
 	}	
 	
 	if (scenario.Rising_Edge_Counter>=2)
@@ -860,14 +907,23 @@ void Treat_Int(uint8_t program)
 {
   switch(program)
 	{
-		case INT_FROM_CH3: HAL_TIM_PWM_Stop(&htim4, TIM_CHANNEL_1);		                   
-			                 Set_Ouput_Trigger(ON);  
+		case INT_FROM_CH1: Set_Ouput_Inversor(ON);  
+		                   Pulse_Program[2].timer_program = DONE;
+		                   break;	
+		
+		case INT_FROM_CH2: Set_Ouput_Inversor(OFF);    
+		                   Pulse_Program[3].timer_program = DONE;
+		                   HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
+		                   HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
+		                   break;			
+		
+		case INT_FROM_CH3: Set_Ouput_Trigger(ON);  
 		                   Pulse_Program[0].timer_program = DONE;
+		                   Program_Pulse_Inverter();
 		                   break;											 
 
 		case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
-                       HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);		
-                       Pulse_Program[1].timer_program = DONE;		
+                       Pulse_Program[1].timer_program = DONE;	                   	                   
                        break;
 
 		default:           break;
@@ -886,6 +942,18 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4))
 	{
     Treat_Int(INT_FROM_CH4);
+  }		
+	
+	if((htim->Instance == TIM4)&& 
+	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
+	{
+    Treat_Int(INT_FROM_CH1);
+  }		
+	
+	if((htim->Instance == TIM4)&& 
+	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2))
+	{
+    Treat_Int(INT_FROM_CH2);
   }		
 }
 
