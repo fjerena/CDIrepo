@@ -190,6 +190,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>advance</ItemText>
         </Ww>
+        <Ww>
+          <count>8</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>testcounter</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>

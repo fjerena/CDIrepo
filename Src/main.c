@@ -70,11 +70,11 @@ typedef struct Calibration
   uint8_t  BP_Timing_Advance[12]; 	
 }struct_Calibration;       
 
-volatile struct_Calibration Calibration_RAM = {8000,
+volatile struct_Calibration Calibration_RAM = {15000,
 	                                            ////The first Engine Speed value in the array needs to be 1200 mandatory
                                               {1200, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
-																							{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}};
-  
+																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}};
+                                              {  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}};
 typedef struct system_info
 {
 	uint8_t  Low_speed_detected;
@@ -309,7 +309,7 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
 
 void Task_Fast(void)
 {
-	
+	Set_Ouput_LED();
 }	
 
 void Task_Medium(void)
@@ -447,7 +447,8 @@ int main(void)
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_Base_Start_IT(&htim2);	
 	HAL_TIM_Base_Start_IT(&htim4);	
-	
+	/* Enable the TIM Capture/Compare 1 interrupt */
+  //__HAL_TIM_ENABLE_IT(htim, TIM_IT_CC1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -459,14 +460,14 @@ int main(void)
 	  {
 			Set_Pulse_Program();
 			
-			if (scenario.Engine_Speed>(scenario.Engine_Speed_old+Delta_RPM))
-			{	
-				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_RESET);
-			}
-      else
-      {				
-				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
-			}
+//			if (scenario.Engine_Speed>(scenario.Engine_Speed_old+Delta_RPM))
+//			{	
+//				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_RESET);
+//			}
+//      else
+//      {				
+//				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
+//			}
 		  			
 			scenario.Engine_Speed_old = scenario.Engine_Speed;			
 		  scenario.Update_calc = 0;
@@ -816,6 +817,7 @@ void Program_Pulse_Inverter(void)
 
 void Event_Scheduler(void)
 { 
+	//__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);	
 	//Program trigger pulse (rising edge and falling edge)
 	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3); 
@@ -923,7 +925,12 @@ void Treat_Int(uint8_t program)
 		                   break;											 
 
 		case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
-                       Pulse_Program[1].timer_program = DONE;	                   	                   
+                       Pulse_Program[1].timer_program = DONE;	  
+                       //HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_3);
+		                   //HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);	
+		                   //The "HAL_TIM_OC_Start_IT" does not enable the overflow interrupt.
+                       //This should be done before enabling the timer using:
+                       //__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);		                   		
                        break;
 
 		default:           break;
@@ -933,16 +940,18 @@ void Treat_Int(uint8_t program)
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if((htim->Instance == TIM2)&& 
-	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3))
-	{
-		Treat_Int(INT_FROM_CH3);			
+	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)&&
+	   (scenario.nOverflow == 0))
+	{		
+			Treat_Int(INT_FROM_CH3);		    		
   }		
 
   if((htim->Instance == TIM2)&& 
-	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4))
-	{
-    Treat_Int(INT_FROM_CH4);
-  }		
+	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)&&
+	   (scenario.nOverflow == 0))
+	{		
+			Treat_Int(INT_FROM_CH4);		    		
+  }			
 	
 	if((htim->Instance == TIM4)&& 
 	   (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
