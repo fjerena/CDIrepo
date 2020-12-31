@@ -49,8 +49,10 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 //Sw defines
 #define nSteps                        64u
-#define TDuty_Trigger_const         1309u     //1.0ms
+#define TDuty_Trigger_const         1309u     //1.0ms for clock 72MHz
 #define TDutyTriggerK               1319u     //10 + 1319
+#define TIntervPulseInv             1964u     //1.0ms + 0.5ms 
+#define TPulseInv                   6460u     //3,5ms measured...
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
 #define FALSE                          0u
@@ -61,6 +63,17 @@ TIM_HandleTypeDef htim4;
 enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
 enum Output_Level {OFF, ON} level;
 enum Event_status {EMPTY, PROGRAMMED, DONE} status;
+enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
+
+/*
+2 different speed 
+Low  <  1200  // fixed advance ignition
+High >= 1200  // according igntion map
+
+Engine Speed: Stopped, Acceleration, Steady State, Decelerate
+
+Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
+*/
 
 //Calibration values
 typedef struct Calibration
@@ -74,7 +87,12 @@ volatile struct_Calibration Calibration_RAM = {15000,
 	                                            ////The first Engine Speed value in the array needs to be 1200 mandatory
                                               {1200, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}};
-                                              {  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}};
+																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48}};
+                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}};
+                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16}};
+																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0}};
+																							{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64}};
+																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18
 typedef struct system_info
 {
 	uint8_t  Low_speed_detected;
@@ -248,6 +266,18 @@ uint8_t Linear_Interpolation(uint16_t value, uint16_t x_array[], uint8_t y_array
   } 	
 }
 
+void Cut_Igntion(void)
+{	
+	if(scenario.Engine_Speed>Calibration_RAM.Max_Engine_Speed)
+	{			
+		scenario.Cutoff_IGN = 1;
+	}	
+	else
+	{	
+		scenario.Cutoff_IGN = 0;
+	}		
+}
+
 void Engine_STOP_test(void)
 {
   static uint8_t program;
@@ -282,7 +312,7 @@ void Update_Pulse_Program(void)
 	
 	Pulse_Program[3].counter = request[3].counter;
 	Pulse_Program[3].timer_program = EMPTY;
-}	
+}
 
 void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, uint8_t *resp_var)
 {
@@ -309,25 +339,18 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
 
 void Task_Fast(void)
 {
-	Set_Ouput_LED();
+	//HAL_IWDG_Init(&hiwdg);	
 }	
 
 void Task_Medium(void)
 {
-		
+	Set_Ouput_LED();	
+	Cut_Igntion();
 }	
 
 void Task_Slow(void)
 {
-  Engine_STOP_test();
-	if(scenario.Engine_Speed>Calibration_RAM.Max_Engine_Speed)
-	{			
-		scenario.Cutoff_IGN = 1;
-	}	
-	else
-	{	
-		scenario.Cutoff_IGN = 0;
-	}		
+  Engine_STOP_test();	
 }	
 
 void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos)
@@ -355,6 +378,15 @@ uint32_t Prediction_Calc(void)
 
   avarage_period = (avarage_period+scenario.Measured_Period)/2;
   return(avarage_period);
+	
+//	errt = dt3[ICint] - dtpred;
+//  ....
+//  // alpha-beta-gamma filter prediction
+//  dts = dtpred + ((inpram.alpha * errt) / 100);
+//  tddts = tddtpred + ((inpram.beta * errt) / 100);
+//  t2dddts = t2dddts + ((inpram.gamma * errt) / 100);
+//  dtpred = dts + tddts + (t2dddts >> 1);
+//  tddtpred = tddts + t2dddts;
 }
 
 uint8_t Ignition_nTime(uint16_t eng_speed)
@@ -381,8 +413,8 @@ void Set_Pulse_Program(void)
 		scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);                            
 		Event1 = scenario.TStep*scenario.nAdv;
 		Event2 = Event1+TDuty_Trigger_const;
-		Event3 = 2618u;
-		Event4 = 5891u;
+		Event3 = TIntervPulseInv;
+		Event4 = TPulseInv;
 	
 		//Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
 		request[0].counter = Event1%65536;
@@ -394,13 +426,12 @@ void Set_Pulse_Program(void)
 		request[2].counter = Event3%65536;
 	
 		//Event 4 - Generates Falling Edge for trigger signal using TMR4 to generate the event
-		request[3].counter = Event4%65536;	
+		request[3].counter = Event4%65536;			
 	}	
 	else
 	{	
 		scenario.Low_speed_detected = 1;
 	}		
-  
 }
 
 /* USER CODE END PFP */
@@ -474,9 +505,9 @@ int main(void)
 	  }
     
     //Scheduler
-		Periodic_task( 100,&Task_Fast,   array_sched_var, 0);		
-		Periodic_task( 500,&Task_Medium, array_sched_var, 1);		
-		Periodic_task(5000,&Task_Slow,   array_sched_var, 2);		
+		Periodic_task(  20,&Task_Fast,   array_sched_var, 0);		
+		Periodic_task( 100,&Task_Medium, array_sched_var, 1);		
+		Periodic_task(1000,&Task_Slow,   array_sched_var, 2);		
     		
     /* USER CODE END WHILE */
 
@@ -802,26 +833,27 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-uint32_t pulse_phase = 1;
-
 void Program_Pulse_Inverter(void)
 {	
 	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[2].counter);
 	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
 	Pulse_Program[2].timer_program = PROGRAMMED;
+	
 	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[3].counter);		
 	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	   
   Pulse_Program[3].timer_program = PROGRAMMED;
+	
 	__HAL_TIM_SET_COUNTER(&htim4,0x0);
 }
 
 void Event_Scheduler(void)
 { 
 	//__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);	
-	//Program trigger pulse (rising edge and falling edge)
+	//Program trigger pulse (rising edge and falling edge)	
 	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3); 
 	Pulse_Program[0].timer_program = PROGRAMMED;
+	
 	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,Pulse_Program[1].counter);		
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);	   
   Pulse_Program[1].timer_program = PROGRAMMED;	
@@ -851,7 +883,7 @@ void Rising_Edge_Event(void)
 	Set_Ouput_InterruptionTest();
 	scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);	 
 	scenario.nOverflow_RE = scenario.nOverflow;
-  scenario.Rising_Edge_Counter++;
+	scenario.Rising_Edge_Counter++;
 	Update_Pulse_Program();
 	Pulse_Computation_Reset();
 	
