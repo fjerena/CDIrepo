@@ -41,8 +41,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
@@ -142,7 +140,6 @@ sched_var array_sched_var[3];
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_ADC1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
@@ -385,7 +382,7 @@ uint8_t Ignition_nTime(uint16_t eng_speed)
 
 void Set_Pulse_Program(void)
 {	
-	static uint32_t Event1, Event2, Event3, Event4;
+	static uint32_t Event1, Event2;
 	
 	scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
   scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
@@ -398,21 +395,13 @@ void Set_Pulse_Program(void)
 		scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
 		scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);                            
 		Event1 = scenario.TStep*scenario.nAdv;
-		Event2 = Event1+TDuty_Trigger_const;
-		Event3 = TIntervPulseInv;
-		Event4 = TPulseInv;
+		Event2 = Event1+TDuty_Trigger_const;		
 	
 		//Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
 		request[0].counter = Event1%65536;
 	
 		//Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
-		request[1].counter = Event2%65536;	
-		
-		//Event 3 - Generates Rising Edge for trigger signal using TMR4 to generate the event
-		request[2].counter = Event3%65536;
-	
-		//Event 4 - Generates Falling Edge for trigger signal using TMR4 to generate the event
-		request[3].counter = Event4%65536;			
+		request[1].counter = Event2%65536;				
 	}	
 	else
 	{	
@@ -460,7 +449,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_ADC1_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
@@ -522,7 +510,6 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the CPU, AHB and APB busses clocks 
   */
@@ -550,57 +537,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
-  * @brief ADC1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_ADC1_Init(void)
-{
-
-  /* USER CODE BEGIN ADC1_Init 0 */
-
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-  /** Common config 
-  */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /** Configure Regular Channel 
-  */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
-
 }
 
 /**
@@ -766,9 +702,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
-                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9 
-                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3 
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
+                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11 
+                          |GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10 
@@ -789,22 +726,22 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : PA0 PA1 PA3 PA4 
+                           PA5 PA7 PA8 PA9 
+                           PA10 PA11 PA12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4 
+                          |GPIO_PIN_5|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9 
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PA2 PA6 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA3 PA4 PA5 PA7 
-                           PA8 PA9 PA10 PA11 
-                           PA12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7 
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11 
-                          |GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB0 PB1 */
@@ -831,25 +768,8 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void Program_Inverter_Pulse(void)
-{	
-	Pulse_Program[2].counter = request[2].counter;
-	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[2].counter);	
-	Pulse_Program[2].timer_program = PROGRAMMED;
-	
-	Pulse_Program[3].counter = request[3].counter;
-	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[3].counter);		   
-  Pulse_Program[3].timer_program = PROGRAMMED;
-	
-	__HAL_TIM_SET_COUNTER(&htim4,0x0);
-	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
-	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	
-}
-
 void Program_Trigger_Pulse(void)
 { 
-	//__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);	
-	//Program trigger pulse (rising edge and falling edge)	
 	Pulse_Program[0].counter = request[0].counter;
 	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);	
 	Pulse_Program[0].timer_program = PROGRAMMED;
@@ -860,6 +780,19 @@ void Program_Trigger_Pulse(void)
 	
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3); 
 	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
+}
+
+void Program_Inverter_Pulse(void)
+{	
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,TIntervPulseInv);	
+	Pulse_Program[2].timer_program = PROGRAMMED;
+		
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,TPulseInv);		   
+  Pulse_Program[3].timer_program = PROGRAMMED;
+	
+	__HAL_TIM_SET_COUNTER(&htim4,0u);
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -874,8 +807,10 @@ void Rising_Edge_Event(void)
 {
 	scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);	 
 	scenario.nOverflow_RE = scenario.nOverflow;
-	__HAL_TIM_SET_COUNTER(&htim2, 0x0);	
+	__HAL_TIM_SET_COUNTER(&htim2,0u);	
 	scenario.nOverflow = 0;	
+	Set_Ouput_Trigger(OFF);
+	Set_Ouput_Inversor(OFF); 
 	scenario.Rising_Edge_Counter++;
 		
 	if((scenario.Low_speed_detected == 0)&&
@@ -900,12 +835,11 @@ void Falling_Edge_Event(void)
 	if(scenario.Low_speed_detected == 1)
 	{	
 		Set_Ouput_Trigger(ON);
+		Program_Inverter_Pulse();
 		counter = __HAL_TIM_GET_COUNTER(&htim2);
 		counter += TDutyTriggerK;		   
 		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);		
-	  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
-		
-		Program_Inverter_Pulse();
+	  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);		
 	}	
 	
 	if (scenario.Rising_Edge_Counter>=2)
@@ -945,7 +879,7 @@ void Treat_Int(uint8_t program)
 		
 		case INT_FROM_CH3: Set_Ouput_Trigger(ON);  
 		                   Pulse_Program[0].timer_program = DONE;
-		                   Program_Inverter_Pulse();
+		                   Program_Inverter_Pulse();		                   
 		                   break;											 
 
 		case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
