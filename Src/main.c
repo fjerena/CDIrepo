@@ -299,21 +299,6 @@ void Engine_STOP_test(void)
   }
 }
 
-void Update_Pulse_Program(void)
-{
-	Pulse_Program[0].counter = request[0].counter;
-	Pulse_Program[0].timer_program = EMPTY;
-	
-	Pulse_Program[1].counter = request[1].counter;
-	Pulse_Program[1].timer_program = EMPTY;
-	
-	Pulse_Program[2].counter = request[2].counter;
-	Pulse_Program[2].timer_program = EMPTY;
-	
-	Pulse_Program[3].counter = request[3].counter;
-	Pulse_Program[3].timer_program = EMPTY;
-}
-
 void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, uint8_t *resp_var)
 {
   uint32_t counter;
@@ -404,6 +389,7 @@ void Set_Pulse_Program(void)
 	
 	scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
   scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
+	
 	if(scenario.nOverflow_RE == 0)
 	{	
 		scenario.Low_speed_detected = 0;
@@ -432,6 +418,11 @@ void Set_Pulse_Program(void)
 	{	
 		scenario.Low_speed_detected = 1;
 	}		
+	
+	Pulse_Program[0].timer_program = EMPTY;	
+	Pulse_Program[1].timer_program = EMPTY;	
+	Pulse_Program[2].timer_program = EMPTY;	
+	Pulse_Program[3].timer_program = EMPTY;
 }
 
 /* USER CODE END PFP */
@@ -473,11 +464,18 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-	            
+		
+	//I don´t know the difference between these two different statment	
+	//HAL_TIM_Base_Start_IT(&htim2);	
+	__HAL_TIM_ENABLE_IT(&htim2, TIM_IT_UPDATE);          
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
-	HAL_TIM_Base_Start_IT(&htim2);	
-	HAL_TIM_Base_Start_IT(&htim4);	
+	
+	//HAL_TIM_Base_Start_IT(&htim4);	
+	
+	//Maybe I don´t need initiate the timers...
+		
+	//HAL_TIM_Base_Start_IT(&htim4);	
 	/* Enable the TIM Capture/Compare 1 interrupt */
   //__HAL_TIM_ENABLE_IT(htim, TIM_IT_CC1);
   /* USER CODE END 2 */
@@ -833,63 +831,57 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void Program_Pulse_Inverter(void)
+void Program_Inverter_Pulse(void)
 {	
-	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[2].counter);
-	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
+	Pulse_Program[2].counter = request[2].counter;
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[2].counter);	
 	Pulse_Program[2].timer_program = PROGRAMMED;
 	
-	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[3].counter);		
-	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	   
+	Pulse_Program[3].counter = request[3].counter;
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[3].counter);		   
   Pulse_Program[3].timer_program = PROGRAMMED;
 	
 	__HAL_TIM_SET_COUNTER(&htim4,0x0);
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1); 
+	HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);	
 }
 
-void Event_Scheduler(void)
+void Program_Trigger_Pulse(void)
 { 
 	//__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);	
 	//Program trigger pulse (rising edge and falling edge)	
-	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);
-	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3); 
+	Pulse_Program[0].counter = request[0].counter;
+	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);	
 	Pulse_Program[0].timer_program = PROGRAMMED;
 	
-	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,Pulse_Program[1].counter);		
-	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);	   
+	Pulse_Program[1].counter = request[1].counter;
+	__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,Pulse_Program[1].counter);		   
   Pulse_Program[1].timer_program = PROGRAMMED;	
-}
-
-void Timer_Overflow_Event(void)
-{
-	scenario.nOverflow++;		
+	
+	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3); 
+	HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim->Instance == TIM2)
 	{	
-		Timer_Overflow_Event();
+		scenario.nOverflow++;
 	}	
-}
-
-void Pulse_Computation_Reset(void)
-{
-	__HAL_TIM_SET_COUNTER(&htim2,0x0);	
-	scenario.nOverflow = 0;	     	
 }
 
 void Rising_Edge_Event(void)
 {
-	Set_Ouput_InterruptionTest();
 	scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);	 
 	scenario.nOverflow_RE = scenario.nOverflow;
+	__HAL_TIM_SET_COUNTER(&htim2, 0x0);	
+	scenario.nOverflow = 0;	
 	scenario.Rising_Edge_Counter++;
-	Update_Pulse_Program();
-	Pulse_Computation_Reset();
-	
-	if((scenario.Low_speed_detected == 0)&&(scenario.Cutoff_IGN == 0))
+		
+	if((scenario.Low_speed_detected == 0)&&
+		 (scenario.Cutoff_IGN == 0))
 	{			
-		Event_Scheduler();
+		Program_Trigger_Pulse();
 	}	
 	else
 	{
@@ -909,11 +901,11 @@ void Falling_Edge_Event(void)
 	{	
 		Set_Ouput_Trigger(ON);
 		counter = __HAL_TIM_GET_COUNTER(&htim2);
-		counter+=TDutyTriggerK;		   
+		counter += TDutyTriggerK;		   
 		__HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);		
 	  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
 		
-		Program_Pulse_Inverter();
+		Program_Inverter_Pulse();
 	}	
 	
 	if (scenario.Rising_Edge_Counter>=2)
@@ -953,16 +945,11 @@ void Treat_Int(uint8_t program)
 		
 		case INT_FROM_CH3: Set_Ouput_Trigger(ON);  
 		                   Pulse_Program[0].timer_program = DONE;
-		                   Program_Pulse_Inverter();
+		                   Program_Inverter_Pulse();
 		                   break;											 
 
 		case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
-                       Pulse_Program[1].timer_program = DONE;	  
-                       //HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_3);
-		                   //HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);	
-		                   //The "HAL_TIM_OC_Start_IT" does not enable the overflow interrupt.
-                       //This should be done before enabling the timer using:
-                       //__HAL_TIM_ENABLE_IT(&htim2,TIM_IT_UPDATE);		                   		
+                       Pulse_Program[1].timer_program = DONE;	                               		
                        break;
 
 		default:           break;
