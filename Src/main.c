@@ -96,7 +96,7 @@ typedef struct system_info
 	uint8_t  Low_speed_detected;
 	uint8_t  Cutoff_IGN;
 	uint8_t  Update_calc;
-  uint8_t  nOverflow;
+  uint32_t nOverflow;	
   uint32_t Rising_Edge_Counter;
 	uint32_t Measured_Period;
 	uint8_t  nOverflow_RE;
