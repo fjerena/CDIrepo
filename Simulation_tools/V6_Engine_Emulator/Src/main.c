@@ -44,10 +44,13 @@
 ADC_HandleTypeDef hadc1;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 #define FALSE                          0u
 #define TRUE                           1u
+#define Sat_Motor_Speed               12u
+#define motor_period                   5u
 
 //Global variable
 enum Output_Level {OFF, ON} level;
@@ -94,6 +97,28 @@ sched_var array_sched_var[3];
 
 volatile uint32_t timer2 = 0;
 
+typedef struct Motor_Control
+{
+	uint16_t motor_speed[30];
+	uint8_t timer[30];
+}motor_control_type;
+
+motor_control_type motor_status = {{   0,    0, 1000,  450,  450,
+	                                   450,  450,  450,  450,  450,
+	                                   300,  150,  100,    0,    0,
+	                                   750,  800,  850,  900,  950, 
+                                    1000, 1200, 1450, 1600, 1900,
+	                                  2000, 2100, 2300, 2500, 2800},
+                                    { 50,   50,    5,   50,   50,
+									                    50,   50,   50,   50,   50,
+									                     5,    5,    5,   50,   50,
+									                    50,   50,   50,   50,   50,
+									                    50,   50,   50,   50,   50,
+										                  50,   50,   50,   50,   50}};  									
+                        	
+
+uint8_t time_elapsed;
+														
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -101,6 +126,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 void Set_Ouput_LED(void)
@@ -185,12 +211,33 @@ void Task_Fast(void)
 
 void Task_Medium(void)
 {
-		
+	static uint8_t i;
+	
+	Set_Ouput_LED();
+	
+	if(time_elapsed==0)
+	{	
+		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, motor_status.motor_speed[i]);
+		time_elapsed=motor_status.timer[i];
+	
+		if(i<Sat_Motor_Speed)
+		{	
+			i++;
+		}	
+		else
+		{	
+			i=0;
+		}		
+  }		
+	else
+	{	
+		time_elapsed--;
+	}	
 }	
 
 void Task_Slow(void)
 {
-  Change_Engine_Speed_Simulation();			
+	Change_Engine_Speed_Simulation();		
 }	
 
 void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos)
@@ -249,6 +296,7 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_TIM3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	            
 	HAL_TIM_Base_Start_IT(&htim3);
@@ -263,9 +311,9 @@ int main(void)
   while (1)
   {
     //Scheduler
-		Periodic_task(100,&Task_Fast, array_sched_var, 0);		
-		Periodic_task(500,&Task_Medium, array_sched_var, 1);		
-		Periodic_task(5000,&Task_Slow, array_sched_var, 2);		
+		Periodic_task(20,&Task_Fast, array_sched_var, 0);		
+		Periodic_task(100,&Task_Medium, array_sched_var, 1);		
+		Periodic_task(1000,&Task_Slow, array_sched_var, 2);		
     		
     /* USER CODE END WHILE */
 
@@ -409,6 +457,55 @@ static void MX_TIM3_Init(void)
 }
 
 /**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 1440;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 300;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+  /* USER CODE END TIM4_Init 2 */
+  HAL_TIM_MspPostInit(&htim4);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -485,12 +582,6 @@ static void MX_GPIO_Init(void)
                           |GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
