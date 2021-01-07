@@ -56,7 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern ADC_HandleTypeDef hadc1;
+extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN EV */
@@ -241,17 +241,17 @@ void RCC_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles ADC1 and ADC2 global interrupts.
+  * @brief This function handles TIM2 global interrupt.
   */
-void ADC1_2_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  /* USER CODE BEGIN ADC1_2_IRQn 0 */
+  /* USER CODE BEGIN TIM2_IRQn 0 */
 
-  /* USER CODE END ADC1_2_IRQn 0 */
-  HAL_ADC_IRQHandler(&hadc1);
-  /* USER CODE BEGIN ADC1_2_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
 
-  /* USER CODE END ADC1_2_IRQn 1 */
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /**

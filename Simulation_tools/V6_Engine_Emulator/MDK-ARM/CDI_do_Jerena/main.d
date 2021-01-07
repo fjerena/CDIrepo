@@ -21,8 +21,6 @@ cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_exti.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma_ex.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
-cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h
-cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 cdi_do_jerena\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
