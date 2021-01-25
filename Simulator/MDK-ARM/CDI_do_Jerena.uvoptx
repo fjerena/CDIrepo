@@ -153,37 +153,32 @@
         <Ww>
           <count>0</count>
           <WinNumber>1</WinNumber>
-          <ItemText>request</ItemText>
+          <ItemText>MotorSpeed_Setpoint</ItemText>
         </Ww>
         <Ww>
           <count>1</count>
           <WinNumber>1</WinNumber>
-          <ItemText>Event2</ItemText>
+          <ItemText>MotorSpeed</ItemText>
         </Ww>
         <Ww>
           <count>2</count>
           <WinNumber>1</WinNumber>
-          <ItemText>carai</ItemText>
+          <ItemText>error_visual</ItemText>
         </Ww>
         <Ww>
           <count>3</count>
           <WinNumber>1</WinNumber>
-          <ItemText>counter_prog</ItemText>
+          <ItemText>CumError</ItemText>
         </Ww>
         <Ww>
           <count>4</count>
           <WinNumber>1</WinNumber>
-          <ItemText>estouros</ItemText>
+          <ItemText>Pwm_PI</ItemText>
         </Ww>
         <Ww>
           <count>5</count>
           <WinNumber>1</WinNumber>
-          <ItemText>carai1</ItemText>
-        </Ww>
-        <Ww>
-          <count>6</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>sim_rpm_index</ItemText>
+          <ItemText>Pwm_OUT</ItemText>
         </Ww>
       </WatchWindow1>
       <WatchWindow2>

@@ -48,7 +48,7 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 #define FALSE                          0u
 #define TRUE                           1u
-#define Sat_Motor_Speed               12u
+#define Sat_Motor_Speed                9u
 #define motor_period                   5u
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
@@ -119,22 +119,14 @@ volatile uint32_t timer2 = 0;
 
 typedef struct Motor_Control
 {
-	uint16_t motor_speed[30];
-	uint8_t timer[30];
+	uint16_t motor_speed[10];
+	uint16_t timer[10];
 }motor_control_type;
 
-motor_control_type motor_status = {{   0,    0, 1000,  450,  450,
-	                                   450,  450,  450,  450,  450,
-	                                   300,  150,  100,    0,    0,
-	                                   750,  800,  850,  900,  950, 
-                                    1000, 1200, 1450, 1600, 1900,
-	                                  2000, 2100, 2300, 2500, 2800},
-                                    { 50,   50,    5,   50,   50,
-									                    50,   50,   50,   50,   50,
-									                     5,    5,    5,   50,   50,
-									                    50,   50,   50,   50,   50,
-									                    50,   50,   50,   50,   50,
-										                  50,   50,   50,   50,   50}};  									
+motor_control_type motor_status = {{    0,  1200,   800,  1000,  1500,
+	                                   1500,  1000,   800,   500,   350},
+                                    { 450,   100,   200,   200,   200,
+									                    150,   100,   100,   100,   100}};  									
                         	
 
 uint8_t time_elapsed;
@@ -142,13 +134,14 @@ uint8_t time_elapsed;
 //PID control
 uint16_t MotorSpeed_Setpoint;		
 uint16_t MotorSpeed;	
-int16_t Error;
 int32_t CumError;		
-uint8_t kpnum=1;
-uint8_t kpdenum=100;
-uint8_t kinum=3;
-uint8_t kidenum=100;				
-uint16_t Pwm_out;																			
+uint16_t kpnum=600;
+uint16_t kpdenum=1000;
+uint16_t kinum=20;
+uint16_t kidenum=1000;				
+int32_t Pwm_PI=0;		
+uint16_t Pwm_OUT=0;		
+int32_t error_visual;																			
 														
 /* USER CODE END PV */
 
@@ -235,29 +228,60 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
   }  
 }
 
+void Engine_STOP_test(void)
+{
+  static uint32_t actual, old;
+
+	actual=scenario.Rising_Edge_Counter;
+	
+	if(actual==old)
+	{	
+		scenario.Rising_Edge_Counter=0;
+    MotorSpeed=0;
+		CumError=0;
+  }
+	
+  old=actual;  
+}
+
 void PI_Control(void)
 {		
-	MotorSpeed_Setpoint=2000u;
-	Error=MotorSpeed_Setpoint-MotorSpeed;
-  CumError+=Error;
-  Pwm_out=(((kpnum*kidenum*Error)+(kinum*kpdenum*CumError))/(kpdenum*kidenum));				
-  /*
-  if((Pwm_out>=0)&&(Pwm_out<=2800))
+	int32_t Error=0;
+	
+	Error=MotorSpeed_Setpoint-MotorSpeed;	
+	error_visual=Error;
+	
+	if((Pwm_PI>=0)&&(Pwm_PI<=2800u))
+  {	
+		CumError+=Error;
+	}
+		
+	//The wheel speed is not reliable in low speed, can interfer drasticly during the control...
+	if(MotorSpeed_Setpoint==0)
+	{	
+		Error=0;
+    CumError=0;		
+	}	
+	
+  Pwm_PI=(((kpnum*kidenum*Error)+(kinum*kpdenum*CumError))/(kpdenum*kidenum));				
+  
+  if((Pwm_PI>=0)&&(Pwm_PI<=2800u))
   {
-		__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pwm_out);
+		Pwm_OUT=Pwm_PI;
   }  
 	else
 	{	
-		if(Pwm_out<0)
+		if(Pwm_PI<0u)
 		{	
-			__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,0);
+			Pwm_OUT=0u;
 		}	
 		else	
 	  {	
-			__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,2800);
+			Pwm_OUT=2800u;
 		}	
-  }	
-  */	
+  }	  	
+	
+	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pwm_OUT);
 }	
 
 void Task_Fast(void)
@@ -269,15 +293,13 @@ void Task_Medium(void)
 {
 	static uint8_t i;
 	
-	Set_Ouput_LED();
-	
-	PI_Control();
+	Set_Ouput_LED();	
 	
 	if(time_elapsed==0)
 	{	
-		__HAL_TIM_SET_COMPARE(&htim4, TIM_CHANNEL_1, motor_status.motor_speed[i]);
-		time_elapsed=motor_status.timer[i];
-	
+		MotorSpeed_Setpoint=motor_status.motor_speed[i];		
+		time_elapsed=motor_status.timer[i];	
+			
 		if(i<Sat_Motor_Speed)
 		{	
 			i++;
@@ -290,12 +312,16 @@ void Task_Medium(void)
 	else
 	{	
 		time_elapsed--;
-	}		
+	}	
+	
+	//MotorSpeed_Setpoint=1000;
+  PI_Control();  
 }	
 
 void Task_Slow(void)
 {
 	Change_Engine_Speed_Simulation();		
+	Engine_STOP_test();
 }	
 
 void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos)
@@ -387,7 +413,7 @@ int main(void)
     //Scheduler
 		Periodic_task(20,&Task_Fast, array_sched_var, 0);		
 		Periodic_task(100,&Task_Medium, array_sched_var, 1);		
-		Periodic_task(1000,&Task_Slow, array_sched_var, 2);		
+		Periodic_task(5000,&Task_Slow, array_sched_var, 2);		
     		
     /* USER CODE END WHILE */
 
@@ -477,10 +503,10 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
   sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
   sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-  sConfigIC.ICFilter = 3;
+  sConfigIC.ICFilter = 8;
   if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
