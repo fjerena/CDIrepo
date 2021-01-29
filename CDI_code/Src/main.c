@@ -45,6 +45,8 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
 //Sw defines
@@ -64,6 +66,7 @@ enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} 
 enum Output_Level {OFF, ON} level;
 enum Event_status {EMPTY, PROGRAMMED, DONE} status;
 enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
+enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE, DATA_AVAILABLE_RX_BUFFER} transmstatus;
 
 /*
 2 different speed 
@@ -138,14 +141,15 @@ typedef struct Scheduler
 sched_var array_sched_var[3];
 
 //UART Communication
-uint8_t UART3_rxBuffer[12] = {'a','b','c','d','e','f','g','h','i','j','k','\n'};
-uint8_t caraio = 'f';
+uint8_t UART3_txBuffer[12] = {'F','a','b','i','o','_','J','e','r','e','n','a'};
+uint8_t UART3_rxBuffer[12];
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -326,6 +330,29 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
   }  
 }
 
+void Data_Transmission(void)
+{	
+	uint8_t HSB,LSB;
+	
+	scenario.Engine_Speed = 2000u;
+	scenario.nAdv = 64u;                        
+	HSB = (scenario.Engine_Speed&0xFF00)>>8;
+	LSB = scenario.Engine_Speed&0xFF;
+  UART3_txBuffer[0] = HSB;
+	UART3_txBuffer[1] = LSB;
+	UART3_txBuffer[2] = scenario.nAdv;
+	transmstatus = TRANSMITING;
+	HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
+}	
+
+void Data_Reception(void)
+{	
+	if(UART3_rxBuffer[1] == 0xD0)
+	{	
+		Set_Ouput_LED();
+	}	
+}	
+
 void Task_Fast(void)
 {
 	//HAL_IWDG_Init(&hiwdg);	
@@ -335,12 +362,13 @@ void Task_Medium(void)
 {
 	Set_Ouput_LED();	
 	Cut_Igntion();
+	Data_Reception();
+	Data_Transmission();
 }	
 
 void Task_Slow(void)
-{
-  Engine_STOP_test();	
-	//HAL_UART_Transmit(&huart3, (uint8_t*)UART3_rxBuffer, 12, 100);
+{		
+  Engine_STOP_test();		
 }	
 
 void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos)
@@ -427,6 +455,24 @@ void Set_Pulse_Program(void)
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+  transmstatus = TRANSMISSION_DONE;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{		
+	HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));	
+  transmstatus = DATA_AVAILABLE_RX_BUFFER;	
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	static int8_t k;
+	
+	k++;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -457,6 +503,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_USART3_UART_Init();
@@ -478,7 +525,13 @@ int main(void)
   //HAL_UART_Receive_IT();
   //HAL_UART_IRQHandler();
 		
-	HAL_UART_Receive_IT (&huart3, UART3_rxBuffer, 12);	
+	//__HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);
+  //__HAL_DMA_ENABLE_IT(&hdma_usart3_rx, DMA_IT_TC);	
+	//hdma_usart3_rx.Instance->CR &
+	//HAL_UART_Receive_IT(&huart3, UART3_rxBuffer, 12);	
+	
+	HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, 12);	
+	
 		
 	//HAL_TIM_Base_Start_IT(&htim4);	
 	
@@ -737,6 +790,25 @@ static void MX_USART3_UART_Init(void)
 
 }
 
+/** 
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void) 
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Channel2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel2_IRQn);
+  /* DMA1_Channel3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+
+}
+
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -969,22 +1041,6 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 	{
     Treat_Int(INT_FROM_CH2);
   }		
-}
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{	
-	HAL_UART_Receive_IT(&huart3, UART3_rxBuffer, 1);
-	HAL_UART_Transmit(&huart3, UART3_rxBuffer, 1, 100);  
-}
-
-void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
-{
-
 }
 
 /* USER CODE END 4 */
