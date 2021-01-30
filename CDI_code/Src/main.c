@@ -141,8 +141,11 @@ typedef struct Scheduler
 sched_var array_sched_var[3];
 
 //UART Communication
-uint8_t UART3_txBuffer[12] = {'F','a','b','i','o','_','J','e','r','e','n','a'};
-uint8_t UART3_rxBuffer[12];
+//uint8_t UART3_txBuffer[12]={0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u};
+uint8_t UART3_txBuffer[37]={'0','6','4','0','6','4','0','6','4','0','6','4',
+                            '0','6','4','0','6','4','0','6','4','0','6','4',
+	                          '0','6','4','0','6','4','0','6','4','0','6','4','7'};
+uint8_t UART3_rxBuffer[37];
 
 /* USER CODE END PV */
 
@@ -330,27 +333,114 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
   }  
 }
 
+uint8_t ConvertNum4DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
+{	
+	uint8_t Mil, Cent, Dez, Unid;
+	uint16_t Man;
+		
+	if((num>=0)&&(num<=9999))
+	{
+		Mil = (num/1000u)+0x30;
+		Man = num%1000u;
+		Cent = (Man/100u)+0x30;
+		Man = Man%100u;
+		Dez = (Man/10u)+0x30;
+		Unid = (Man%10u)+0x30;
+	
+		resp[i]=Mil;
+		resp[i+1]=Cent;
+		resp[i+2]=Dez;
+		resp[i+3]=Unid;	
+		
+		return(TRUE);
+	}	
+	else
+	{	
+		return(FALSE);
+	}	
+}	
+
+uint8_t ConvertNum3DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
+{	
+	uint8_t Cent, Dez, Unid;
+	uint16_t Man;
+		
+	if((num>=0)&&(num<=999))
+	{	
+		Cent = (num/100u)+0x30;
+		Man = num%100u;
+		Dez = (Man/10u)+0x30;
+		Unid = (Man%10u)+0x30;
+	
+		resp[i]=Cent;
+		resp[i+1]=Dez;
+		resp[i+2]=Unid;
+		
+		return(TRUE);
+	}
+	else
+	{	
+		return(FALSE);
+	}	
+}	
+
+void Checksum(uint8_t strg[], uint8_t strg_length)
+{	
+	uint8_t i,result;
+		
+	for(i=0;i<(strg_length)-1;i++)
+	{
+		result+=strg[i];
+	}	
+	
+	strg[(strg_length)-1]=result;
+}	
+
 void Data_Transmission(void)
 {	
-	uint8_t HSB,LSB;
+	ConvertNum4DigToStr(scenario.Engine_Speed, UART3_txBuffer, 0);
+	ConvertNum3DigToStr(scenario.nAdv, UART3_txBuffer, 4);
+	Checksum(UART3_txBuffer, sizeof(UART3_txBuffer));	                       
 	
-	scenario.Engine_Speed = 2000u;
-	scenario.nAdv = 64u;                        
-	HSB = (scenario.Engine_Speed&0xFF00)>>8;
-	LSB = scenario.Engine_Speed&0xFF;
-  UART3_txBuffer[0] = HSB;
-	UART3_txBuffer[1] = LSB;
-	UART3_txBuffer[2] = scenario.nAdv;
 	transmstatus = TRANSMITING;
 	HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
 }	
 
-void Data_Reception(void)
+void Data_Transmission1(void)
 {	
-	if(UART3_rxBuffer[1] == 0xD0)
-	{	
-		Set_Ouput_LED();
+	transmstatus = TRANSMITING;
+	HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
+}
+
+uint8_t Data_Reception(uint8_t strg[])
+{	
+	uint8_t i,j,k;
+	uint8_t sum, checksum;
+	
+	k=0;
+	checksum=strg[36];
+	
+	for(i=0;i<strg[35];i++)
+	{
+		sum+=strg[i];
 	}	
+	
+	sum='7';
+	
+	if(sum==checksum)
+	{	
+		for(j=0;j<34;j=j+3)
+		{
+			Calibration_RAM.BP_Timing_Advance[k]=(((strg[j]-48u)*100u)+((strg[j+1]-48u)*10u)+((strg[j+2]-48u*1u)));		
+      k++;			
+		}			
+	
+		return(TRUE);
+	}	
+	else
+	{
+		return(FALSE);
+  }	
 }	
 
 void Task_Fast(void)
@@ -362,8 +452,8 @@ void Task_Medium(void)
 {
 	Set_Ouput_LED();	
 	Cut_Igntion();
-	Data_Reception();
-	Data_Transmission();
+	Data_Reception(UART3_rxBuffer);
+	Data_Transmission1();
 }	
 
 void Task_Slow(void)
@@ -530,7 +620,7 @@ int main(void)
 	//hdma_usart3_rx.Instance->CR &
 	//HAL_UART_Receive_IT(&huart3, UART3_rxBuffer, 12);	
 	
-	HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, 12);	
+	HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));	
 	
 		
 	//HAL_TIM_Base_Start_IT(&htim4);	
