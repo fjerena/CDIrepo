@@ -60,6 +60,9 @@ DMA_HandleTypeDef hdma_usart3_tx;
 #define FALSE                          0u
 #define TRUE                           1u
 #define Delta_RPM                    100u
+#define EngineSpeedPeriod_Min     785455u
+#define EngineSpeedPeriod_Max       5236u 
+
 
 //Global variable
 enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
@@ -510,29 +513,36 @@ void Set_Pulse_Program(void)
 {	
 	static uint32_t Event1, Event2;
 	
-	scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
-  scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
+	scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits
 	
-	if(scenario.nOverflow_RE == 0)
-	{	
-		scenario.Low_speed_detected = 0;
-		scenario.Predicted_Period = Prediction_Calc();
-		scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
-		scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
-		scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);                            
-		Event1 = scenario.TStep*scenario.nAdv;
-		Event2 = Event1+TDuty_Trigger_const;		
+	if((scenario.Measured_Period>=EngineSpeedPeriod_Max)&& 
+		 (scenario.Measured_Period<=EngineSpeedPeriod_Min))
+	{
+		scenario.Engine_Speed = RPM_const/scenario.Measured_Period;	
+		scenario.Engine_Speed_old = scenario.Engine_Speed;
 	
-		//Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
-		request[0].counter = Event1%65536;
+		if(scenario.nOverflow_RE == 0)
+		{	
+			scenario.Low_speed_detected = 0;
+			scenario.Predicted_Period = Prediction_Calc();
+			scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
+			scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
+			//scenario.nAdv = Ignition_nTime(scenario.Engine_Speed); 
+			scenario.nAdv = 0;		
+			Event1 = scenario.TStep*scenario.nAdv;
+			Event2 = Event1+TDuty_Trigger_const;		
 	
-		//Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
-		request[1].counter = Event2%65536;				
-	}	
-	else
-	{	
-		scenario.Low_speed_detected = 1;
-	}		
+			//Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
+			request[0].counter = Event1%65536u;
+	
+			//Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
+			request[1].counter = Event2%65536u;				
+		}	
+		else
+		{	
+			scenario.Low_speed_detected = 1;
+		}		
+	}
 	
 	Pulse_Program[0].timer_program = EMPTY;	
 	Pulse_Program[1].timer_program = EMPTY;	
@@ -639,18 +649,8 @@ int main(void)
     //Update the pulse calc scenario
 		if (scenario.Update_calc == 1)
 	  {
-			Set_Pulse_Program();
-			
-//			if (scenario.Engine_Speed>(scenario.Engine_Speed_old+Delta_RPM))
-//			{	
-//				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_RESET);
-//			}
-//      else
-//      {				
-//				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);
-//			}
-		  			
-			scenario.Engine_Speed_old = scenario.Engine_Speed;			
+			Set_Pulse_Program();	  			
+						
 		  scenario.Update_calc = 0;
 	  }
     
