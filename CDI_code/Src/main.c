@@ -94,34 +94,38 @@ typedef struct Calibration
 volatile struct_Calibration Calibration_RAM = {15000,
 	                                            ////The first Engine Speed value in the array needs to be 1200 mandatory
                                               {1200, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
-																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}};
-																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48}};
-                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}};
-                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16}};
-																							{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
-																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64}};
+																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
+																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
+                                              {  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
+                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16},90,80,10};
+																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
+																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64},90,80,10};
 																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18
 typedef struct system_info
 {
-    int32_t  tdutyInputSignalPred;
+	  uint16_t Engine_Speed_old;
+    uint16_t Engine_Speed;
+	  uint16_t engineSpeedPred;
+	  uint16_t engineSpeedFiltered;
+	  uint16_t avarageEngineSpeed;
     int32_t  deltaEngineSpeed;
+	  uint32_t Rising_Edge_Counter;
+	  uint32_t Measured_Period;
+    uint32_t TDuty_Input_Signal;
+    uint32_t tdutyInputSignalPred;
+	  uint32_t tdutyInputSignalPredLinear;
+	  uint8_t  sensorWindow;
+	  uint32_t TStep;
+    uint8_t  nAdv;    
     uint8_t  Low_speed_detected;
     uint8_t  Cutoff_IGN;
     uint8_t  Update_calc;
-    uint32_t nOverflow;
-    uint32_t Rising_Edge_Counter;
-    uint32_t Measured_Period;
+    uint32_t nOverflow;    
     uint8_t  nOverflow_RE;
-    uint8_t  nOverflow_FE;
-    uint16_t Engine_Speed_old;
-    uint16_t Engine_Speed;
-    uint16_t engineSpeedPred;
-    uint32_t TDuty_Input_Signal;
-    uint32_t TStep;
-    uint8_t  nAdv;
+    uint8_t  nOverflow_FE;   
 }system_vars;
 
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 typedef struct timerproperty
 {
@@ -214,7 +218,7 @@ void Set_Ouput_Inversor(uint8_t Value)
 // A iterative binary search function. It returns
 // location of x in given array arr[l..r] if present,
 // otherwise -1
-int8_t binarySearch(uint16_t array[], uint8_t first, uint8_t last, uint16_t search)
+uint8_t binarySearch(volatile uint16_t array[], uint8_t first, uint8_t last, uint16_t search)
 {
     uint8_t middle;
 
@@ -238,11 +242,13 @@ int8_t binarySearch(uint16_t array[], uint8_t first, uint8_t last, uint16_t sear
 
         middle = (first + last)>>1;
     }
+		
+		return (255u);
 }
 
 //This function was prepared to return a 8 bits value, however is saturated  in 64
 //Its mandatory in rpm array there are some difference value between two adjacent fields, if do not respect will cause an error return 0xFF
-uint8_t linearInterpolation(uint16_t value, uint16_t x_array[], uint8_t y_array[])
+uint8_t linearInterpolation(uint16_t value, volatile uint16_t x_array[], volatile uint8_t y_array[])
 {
     uint8_t interp_index;
     uint8_t interp_res;
@@ -259,7 +265,7 @@ uint8_t linearInterpolation(uint16_t value, uint16_t x_array[], uint8_t y_array[
 
     interp_index = binarySearch(x_array, 0, 11, value);
 
-    if((x_array[interp_index+1]-x_array[interp_index])!=0)
+    if(((x_array[interp_index+1]-x_array[interp_index])!=0)&&(interp_index!=255u))
     {
         interp_res = (((y_array[interp_index+1]-y_array[interp_index])*(value-x_array[interp_index]))/(x_array[interp_index+1]-x_array[interp_index]))+y_array[interp_index];
         if(interp_res>64u)
@@ -270,7 +276,7 @@ uint8_t linearInterpolation(uint16_t value, uint16_t x_array[], uint8_t y_array[
     }
     else
     {
-        return(0xFF);
+        return(255u);
     }
 }
 
@@ -335,7 +341,7 @@ uint8_t ConvertNum4DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
     uint8_t Mil, Cent, Dez, Unid;
     uint16_t Man;
 
-    if((num>=0u)&&(num<=9999u))
+    if(num<=9999u)
     {
         Mil = (num/1000u)+0x30;
         Man = num%1000u;
@@ -362,7 +368,7 @@ uint8_t ConvertNum3DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
     uint8_t Cent, Dez, Unid;
     uint16_t Man;
 
-    if((num>=0u)&&(num<=999u))
+    if(num<=999u)
     {
         Cent = (num/100u)+0x30;
         Man = num%100u;
@@ -407,6 +413,39 @@ void Data_Transmission1(void)
 {
     transmstatus = TRANSMITING;
     HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
+}
+
+uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
+{
+    static uint8_t varOld = 0u;
+    uint8_t varFiltered;
+    int16_t delta = 0;
+
+    delta = (int16_t)var - (int16_t)varOld;
+    varFiltered = ((delta*k)/255u)+(int16_t)varOld;
+    varOld = varFiltered;
+
+    return(varFiltered);
+}
+
+uint16_t digitalFilter16bits(uint16_t var, uint8_t k)
+{
+    static uint16_t varOld = 0u;
+    uint16_t varFiltered;
+    int16_t delta = 0;
+
+    delta = var - varOld;
+    varFiltered = ((delta*k)/255u)+(int16_t)varOld;
+    varOld = varFiltered;
+
+    return(varFiltered);
+}
+
+void Statistics(void)
+{
+    scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 255u);
+    scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
+	  scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
 
 uint8_t Data_Reception(uint8_t strg[])
@@ -478,41 +517,23 @@ void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t
     }
 }
 
-uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
-{
-    static uint8_t varOld = 0u;
-    uint8_t varFiltered;
-    int32_t delta = 0;
-
-    delta = var - varOld;
-    varFiltered = ((delta*k)/255u)+varOld;
-    varOld = varFiltered;
-
-    return(varFiltered);
-}
-
-uint8_t digitalFilter16bits(uint16_t var, uint8_t k)
-{
-    static uint16_t varOld = 0u;
-    uint16_t varFiltered;
-    int32_t delta = 0;
-
-    delta = var - varOld;
-    varFiltered = ((delta*k)/255u)+varOld;
-    varOld = varFiltered;
-
-    return(varFiltered);
-}
-
-void calculationEngineSpeed(system_vars *var)
+void calculationEngineSpeed(volatile system_vars *var)
 {
     var->Engine_Speed = RPM_const/var->Measured_Period;
     var->deltaEngineSpeed = var->Engine_Speed-var->Engine_Speed_old;
 
-    //Linear interpolation
+    //Linear prediction
     if((var->Engine_Speed<<1)>var->Engine_Speed_old)
     {
         var->engineSpeedPred = (var->Engine_Speed<<1)-var->Engine_Speed_old;
+			  if(var->engineSpeedPred>0)
+				{	
+					var->tdutyInputSignalPredLinear = (RPM_const*28u)/(var->engineSpeedPred*360u);
+				}
+				else
+				{	
+					var->tdutyInputSignalPredLinear = EngineSpeedPeriod_Min;
+				}	
     }
     else
     {
@@ -522,16 +543,7 @@ void calculationEngineSpeed(system_vars *var)
     var->Engine_Speed_old = var->Engine_Speed;
 }
 
-void Statistics(void)
-{
-    static uint32_t avarageEngineSpeed;
-    static uint16_t engineSpeedFiltered;
-
-    engineSpeedFiltered = digitalFilter8bits(scenario.Engine_Speed, 40u);
-    avarageEngineSpeed = (avarageEngineSpeed+scenario.Engine_Speed)>>1;
-}
-
-int32_t predictionCalc(uint32_t period)
+uint32_t predictionCalc(uint32_t period)
 {
 //http://www.mstarlabs.com/control/engspeed.html
 //http://www.megamanual.com/ms2/alphabeta.htm#:~:text=MegaSquirt%2DII%20code%20version%202.83,2nd%20derivative'%20prediction%20options).
@@ -580,7 +592,8 @@ void Set_Pulse_Program(void)
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
             scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
-            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
+            //scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
+					  scenario.nAdv = 64;
             Event1 = scenario.TStep*scenario.nAdv;
             Event2 = Event1+TDuty_Trigger_const;
 
