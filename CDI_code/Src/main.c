@@ -92,7 +92,7 @@ typedef struct Calibration
 
 volatile struct_Calibration Calibration_RAM = {15000,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
-                                              {1200, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
+                                              {1250, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
 																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
                                               //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
@@ -103,6 +103,7 @@ volatile struct_Calibration Calibration_RAM = {15000,
 																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18																							
 typedef struct system_info
 {
+	  uint8_t  teste;
 	  uint8_t  igPos;
 	  uint16_t Engine_Speed_old;
     uint16_t Engine_Speed;
@@ -126,7 +127,7 @@ typedef struct system_info
     uint8_t  nOverflow_FE;   
 }system_vars;
 
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 typedef struct timerproperty
 {
@@ -593,7 +594,7 @@ void Set_Pulse_Program(void)
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
             scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
             scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
-					  scenario.nAdv = 32;
+					  scenario.nAdv = 32u;
             Event1 = scenario.TStep*scenario.nAdv;
             Event2 = Event1+TDuty_Trigger_const;
 
@@ -752,7 +753,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -765,7 +766,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -957,10 +958,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/**
+/** 
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void)
+static void MX_DMA_Init(void) 
 {
 
   /* DMA controller clock enable */
@@ -995,15 +996,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
-                          |GPIO_PIN_12, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4 
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8 
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12 
+                          |GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12 
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
                           |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
@@ -1019,12 +1020,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA0 PA1 PA3 PA4
-                           PA5 PA7 PA8 PA9
-                           PA10 PA11 PA12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
-                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
+  /*Configure GPIO pins : PA1 PA3 PA4 PA5 
+                           PA7 PA8 PA9 PA10 
+                           PA11 PA12 PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1044,11 +1045,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB12 PB13 PB14
-                           PB15 PB3 PB4 PB5
+  /*Configure GPIO pins : PB2 PB12 PB13 PB14 
+                           PB15 PB3 PB4 PB5 
                            PB6 PB7 PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
                           |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1096,24 +1097,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void Rising_Edge_Event(void)
 {
-    scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);
+	  scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);
     scenario.nOverflow_RE = scenario.nOverflow;
     __HAL_TIM_SET_COUNTER(&htim2,0u);
     scenario.nOverflow = 0u;
     Set_Ouput_Trigger(OFF);
     Set_Ouput_Inversor(OFF);
-    scenario.Rising_Edge_Counter++;
+    scenario.Rising_Edge_Counter++;	  
 
     //if((scenario.Low_speed_detected == OFF)&&
-		if((scenario.igPos == 1u)&&	
+		if((scenario.igPos != 0u)&&	
        (scenario.Cutoff_IGN == OFF))
     {
         Program_Trigger_Pulse();
+			  //scenario.teste = 1u;
     }
-    else
+    else 
     {
         HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_3);
         HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);
+			  //scenario.teste = 0u;
     }
 }
 
@@ -1125,19 +1128,23 @@ void Falling_Edge_Event(void)
     scenario.nOverflow_FE = scenario.nOverflow;
 
     //if(scenario.Low_speed_detected == ON)
-		if(scenario.igPos == 0u)	
+		//if((scenario.igPos == 0u)&&(Pulse_Program[1].timer_program != PROGRAMMED))
+	  //if(scenario.igPos == 0u)
+	  if(scenario.igPos == 0u)
     {
-        Set_Ouput_Trigger(ON);
-        Program_Inverter_Pulse();
+        Program_Inverter_Pulse();			  
         counter = __HAL_TIM_GET_COUNTER(&htim2);
+			  counter += 5u;
+			  __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,counter);
         counter += TDutyTriggerK;
         __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);
+			  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3);
         HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
     }
 
     if (scenario.Rising_Edge_Counter>=2)
     {
-        scenario.Update_calc = 1;        //set zero after Engine Stop was detected
+        scenario.Update_calc = TRUE;        //set zero after Engine Stop was detected
     }
 }
 
@@ -1186,15 +1193,19 @@ void Treat_Int(uint8_t program)
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if((htim->Instance == TIM2)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)&&
-       (scenario.nOverflow == 0))
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3))//&&
+       //(scenario.nOverflow == 0))
+		   //(scenario.igPos == 1u))
+		   //(scenario.nOverflow_RE == 0))
+		   //(scenario.teste == 1))
     {
         Treat_Int(INT_FROM_CH3);
     }
 
     if((htim->Instance == TIM2)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)&&
-       (scenario.nOverflow == 0))
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4))//&&
+       //(scenario.nOverflow == 0))
+		   //(scenario.igPos == 1u))
     {
         Treat_Int(INT_FROM_CH4);
     }
@@ -1235,7 +1246,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{
+{ 
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
