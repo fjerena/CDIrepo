@@ -72,11 +72,10 @@ enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE, DATA_AVAILABLE_RX_BUFF
 
 /*
 2 different speed
-Low  <  1200  // fixed advance ignition
-High >= 1200  // according igntion map
-
+Low  <  1200                                  // fixed advance ignition
+High >= First breakpoint(with restriction %)  // according igntion map
+%Due the sw conception, the first break point must be >= 1200rpm
 Engine Speed: Stopped, Acceleration, Steady State, Decelerate
-
 Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
 */
 
@@ -92,17 +91,19 @@ typedef struct Calibration
 }struct_Calibration;
 
 volatile struct_Calibration Calibration_RAM = {15000,
-	                                            ////The first Engine Speed value in the array needs to be 1200 mandatory
+	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
                                               {1200, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
 																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
-                                              {  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
+                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
                                               //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16},90,80,10};
 																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
 																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64},90,80,10};
-																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18
+																							{  64,   54,   44,   32,   15,    0,    0,   36,   40,   45,     55,     64},90,80,10};
+																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18																							
 typedef struct system_info
 {
+	  uint8_t  igPos;
 	  uint16_t Engine_Speed_old;
     uint16_t Engine_Speed;
 	  uint16_t engineSpeedPred;
@@ -125,7 +126,7 @@ typedef struct system_info
     uint8_t  nOverflow_FE;   
 }system_vars;
 
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 typedef struct timerproperty
 {
@@ -419,11 +420,9 @@ uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
 {
     static uint8_t varOld = 0u;
     uint8_t varFiltered;
-    int16_t delta = 0;
-
-    delta = (int16_t)var - (int16_t)varOld;
-    varFiltered = ((delta*k)/255u)+(int16_t)varOld;
-    varOld = varFiltered;
+    
+    varFiltered = var + (((varOld-var)*k)/255u);
+    varOld = var;
 
     return(varFiltered);
 }
@@ -432,18 +431,16 @@ uint16_t digitalFilter16bits(uint16_t var, uint8_t k)
 {
     static uint16_t varOld = 0u;
     uint16_t varFiltered;
-    int16_t delta = 0;
-
-    delta = var - varOld;
-    varFiltered = ((delta*k)/255u)+(int16_t)varOld;
-    varOld = varFiltered;
+    
+    varFiltered = var + (((varOld-var)*k)/255u);
+    varOld = var;
 
     return(varFiltered);
 }
 
 void Statistics(void)
 {
-    scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 255u);
+    scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 50u);
     scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
 	  scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
@@ -539,8 +536,8 @@ void calculationEngineSpeed(volatile system_vars *var)
     {
         var->engineSpeedPred = 0u;
     }
-
-    var->Engine_Speed_old = var->Engine_Speed;
+		
+		var->Engine_Speed_old = var->Engine_Speed;
 }
 
 uint32_t predictionCalc(uint32_t period)
@@ -577,6 +574,8 @@ uint8_t Ignition_nTime(uint16_t eng_speed)
 void Set_Pulse_Program(void)
 {
     static uint32_t Event1, Event2;
+	
+		Set_Ouput_InterruptionTest();
 
     scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
 
@@ -586,14 +585,15 @@ void Set_Pulse_Program(void)
     {
         calculationEngineSpeed(&scenario);
 
-        if(scenario.nOverflow_RE == 0u)
+        if(scenario.Engine_Speed>=Calibration_RAM.BP_Engine_Speed[0])
         {
+						scenario.igPos = 1u;    
             scenario.Low_speed_detected = OFF;
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
             scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
-            //scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
-					  scenario.nAdv = 64;
+            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
+					  scenario.nAdv = 32;
             Event1 = scenario.TStep*scenario.nAdv;
             Event2 = Event1+TDuty_Trigger_const;
 
@@ -604,7 +604,8 @@ void Set_Pulse_Program(void)
             request[1].counter = Event2%65536u;
         }
         else
-        {
+        { 	
+						scenario.igPos = 0u;
             scenario.Low_speed_detected = ON;
         }
     }
@@ -623,6 +624,8 @@ void Set_Pulse_Program(void)
     Pulse_Program[1].timer_program = EMPTY;
     Pulse_Program[2].timer_program = EMPTY;
     Pulse_Program[3].timer_program = EMPTY;
+		
+		Set_Ouput_InterruptionTest();
 }
 
 /* USER CODE END PFP */
@@ -1101,7 +1104,8 @@ void Rising_Edge_Event(void)
     Set_Ouput_Inversor(OFF);
     scenario.Rising_Edge_Counter++;
 
-    if((scenario.Low_speed_detected == OFF)&&
+    //if((scenario.Low_speed_detected == OFF)&&
+		if((scenario.igPos == 1u)&&	
        (scenario.Cutoff_IGN == OFF))
     {
         Program_Trigger_Pulse();
@@ -1120,7 +1124,8 @@ void Falling_Edge_Event(void)
     scenario.TDuty_Input_Signal = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_2);
     scenario.nOverflow_FE = scenario.nOverflow;
 
-    if(scenario.Low_speed_detected == ON)
+    //if(scenario.Low_speed_detected == ON)
+		if(scenario.igPos == 0u)	
     {
         Set_Ouput_Trigger(ON);
         Program_Inverter_Pulse();
