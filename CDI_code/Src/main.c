@@ -190,7 +190,7 @@ void Set_Ouput_LED(void)
 
 void Set_Ouput_Trigger(uint8_t Value)
 {
-    if (Value == TRUE)
+    if (Value == ON)
     {
         HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
     }
@@ -207,7 +207,7 @@ void Set_Ouput_InterruptionTest(void)
 
 void Set_Ouput_Inversor(uint8_t Value)
 {
-    if (Value == TRUE)
+    if (Value == ON)
     {
         HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);
     }
@@ -486,9 +486,9 @@ void Task_Medium(void)
 {
     Set_Ouput_LED();
     Cut_Igntion();
-    Data_Reception(UART3_rxBuffer);
-    Data_Transmission1();
-    Statistics();
+    //Data_Reception(UART3_rxBuffer);
+    //Data_Transmission1();
+    //Statistics();
 }
 
 void Task_Slow(void)
@@ -593,7 +593,7 @@ void Set_Pulse_Program(void)
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
             scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
-            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
+            //scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
 					  scenario.nAdv = 32u;
             Event1 = scenario.TStep*scenario.nAdv;
             Event2 = Event1+TDuty_Trigger_const;
@@ -602,7 +602,7 @@ void Set_Pulse_Program(void)
             request[0].counter = Event1%65536u;
 
             //Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
-            request[1].counter = Event2%65536u;
+            request[1].counter = Event2%65536u;					  
         }
         else
         { 	
@@ -622,9 +622,9 @@ void Set_Pulse_Program(void)
     }
 
     Pulse_Program[0].timer_program = EMPTY;
-    Pulse_Program[1].timer_program = EMPTY;
-    Pulse_Program[2].timer_program = EMPTY;
-    Pulse_Program[3].timer_program = EMPTY;
+		Pulse_Program[1].timer_program = EMPTY;
+		Pulse_Program[2].timer_program = EMPTY;
+		Pulse_Program[3].timer_program = EMPTY;
 		
 		Set_Ouput_InterruptionTest();
 }
@@ -1107,6 +1107,7 @@ void Rising_Edge_Event(void)
 
     //if((scenario.Low_speed_detected == OFF)&&
 		if((scenario.igPos != 0u)&&	
+	  //if((scenario.nOverflow_RE == 0u)&&
        (scenario.Cutoff_IGN == OFF))
     {
         Program_Trigger_Pulse();
@@ -1129,17 +1130,15 @@ void Falling_Edge_Event(void)
 
     //if(scenario.Low_speed_detected == ON)
 		//if((scenario.igPos == 0u)&&(Pulse_Program[1].timer_program != PROGRAMMED))
-	  //if(scenario.igPos == 0u)
 	  if(scenario.igPos == 0u)
+	  //if(scenario.nOverflow_RE != 0u)
     {
+			  Set_Ouput_Trigger(ON);
         Program_Inverter_Pulse();			  
         counter = __HAL_TIM_GET_COUNTER(&htim2);
-			  counter += 5u;
-			  __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,counter);
-        counter += TDutyTriggerK;
+			  counter += TDutyTriggerK;
         __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);
-			  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3);
-        HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
+			  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
     }
 
     if (scenario.Rising_Edge_Counter>=2)
@@ -1193,9 +1192,9 @@ void Treat_Int(uint8_t program)
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if((htim->Instance == TIM2)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3))//&&
-       //(scenario.nOverflow == 0))
-		   //(scenario.igPos == 1u))
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)&&
+       //(scenario.nOverflow_RE == 0))
+		   (scenario.igPos != 0u))
 		   //(scenario.nOverflow_RE == 0))
 		   //(scenario.teste == 1))
     {
