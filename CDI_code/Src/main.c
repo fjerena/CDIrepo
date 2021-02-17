@@ -53,7 +53,7 @@ DMA_HandleTypeDef hdma_usart3_tx;
 #define nSteps                        64u
 #define TDuty_Trigger_const         1309u     //1.0ms for clock 72MHz
 #define TDutyTriggerK               1319u     //10 + 1319
-#define TIntervPulseInv             1964u     //1.0ms + 0.5ms
+#define TIntervPulseInv              655u     //1964u     //1.0ms + 0.5ms
 #define TPulseInv                   6460u     //3,5ms measured...
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
@@ -103,7 +103,7 @@ volatile struct_Calibration Calibration_RAM = {15000,
 																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18																							
 typedef struct system_info
 {
-	  uint8_t  teste;
+	  uint16_t teste;
 	  uint8_t  igPos;
 	  uint16_t Engine_Speed_old;
     uint16_t Engine_Speed;
@@ -576,7 +576,7 @@ void Set_Pulse_Program(void)
 {
     static uint32_t Event1, Event2;
 	
-		Set_Ouput_InterruptionTest();
+		//Set_Ouput_InterruptionTest();
 
     scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
 
@@ -626,7 +626,7 @@ void Set_Pulse_Program(void)
 		Pulse_Program[2].timer_program = EMPTY;
 		Pulse_Program[3].timer_program = EMPTY;
 		
-		Set_Ouput_InterruptionTest();
+		//Set_Ouput_InterruptionTest();
 }
 
 /* USER CODE END PFP */
@@ -1076,7 +1076,7 @@ void Program_Trigger_Pulse(void)
 
 void Program_Inverter_Pulse(void)
 {
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,TIntervPulseInv);
+	  __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,TIntervPulseInv);
     Pulse_Program[2].timer_program = PROGRAMMED;
 
     __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,TPulseInv);
@@ -1104,12 +1104,15 @@ void Rising_Edge_Event(void)
     Set_Ouput_Trigger(OFF);
     Set_Ouput_Inversor(OFF);
     scenario.Rising_Edge_Counter++;	  
+	
+	  //scenario.teste = 1;
 
     //if((scenario.Low_speed_detected == OFF)&&
 		if((scenario.igPos != 0u)&&	
 	  //if((scenario.nOverflow_RE == 0u)&&
        (scenario.Cutoff_IGN == OFF))
     {
+			  scenario.teste = 0;
         Program_Trigger_Pulse();
 			  //scenario.teste = 1u;
     }
@@ -1152,6 +1155,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     if((htim->Instance == TIM2)&&
        (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
     {
+			  scenario.teste = 1;
         Rising_Edge_Event();
     }
 
@@ -1168,6 +1172,7 @@ void Treat_Int(uint8_t program)
     {
         case INT_FROM_CH1: Set_Ouput_Inversor(ON);
                            Pulse_Program[2].timer_program = DONE;
+			                     
                            break;
 
         case INT_FROM_CH2: Set_Ouput_Inversor(OFF);
@@ -1178,11 +1183,13 @@ void Treat_Int(uint8_t program)
 
         case INT_FROM_CH3: Set_Ouput_Trigger(ON);
                            Pulse_Program[0].timer_program = DONE;
-                           Program_Inverter_Pulse();
+													 Set_Ouput_InterruptionTest();                           
                            break;
 
         case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
                            Pulse_Program[1].timer_program = DONE;
+			                     
+			                     Program_Inverter_Pulse();
                            break;
 
         default:           break;
@@ -1191,14 +1198,18 @@ void Treat_Int(uint8_t program)
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
+	  scenario.teste = __HAL_TIM_GET_COUNTER(&htim2);
+	
     if((htim->Instance == TIM2)&&
        (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)&&
        //(scenario.nOverflow_RE == 0))
-		   (scenario.igPos != 0u))
+		   (scenario.igPos != 0u)&&
+		   (scenario.teste > 300))
 		   //(scenario.nOverflow_RE == 0))
 		   //(scenario.teste == 1))
     {
         Treat_Int(INT_FROM_CH3);
+				scenario.teste = 0;
     }
 
     if((htim->Instance == TIM2)&&
@@ -1210,7 +1221,10 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
     }
 
     if((htim->Instance == TIM4)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)&&
+		   (Pulse_Program[1].timer_program == DONE))  //### I need to understand why I need to use this to eliminate the
+																								  // the twice execution for INT_FROM_CH1
+       //(scenario.nOverflow_RE == 0))
     {
         Treat_Int(INT_FROM_CH1);
     }

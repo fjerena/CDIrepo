@@ -3,7 +3,7 @@
 <title>Static Call Graph - [CDI_do_Jerena\CDI_do_Jerena.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image CDI_do_Jerena\CDI_do_Jerena.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Tue Feb 16 22:06:11 2021
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060750: Last Updated: Wed Feb 17 23:11:32 2021
 <BR><P>
 <H3>Maximum Stack Usage =        160 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -553,7 +553,7 @@ Global Symbols
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM2_Init
 </UL>
 
-<P><STRONG><a name="[6f]"></a>HAL_TIM_IC_CaptureCallback</STRONG> (Thumb, 42 bytes, Stack size 8 bytes, main.o(i.HAL_TIM_IC_CaptureCallback))
+<P><STRONG><a name="[6f]"></a>HAL_TIM_IC_CaptureCallback</STRONG> (Thumb, 46 bytes, Stack size 8 bytes, main.o(i.HAL_TIM_IC_CaptureCallback))
 <BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = HAL_TIM_IC_CaptureCallback &rArr; Rising_Edge_Event &rArr; Program_Trigger_Pulse &rArr; HAL_TIM_OC_Start_IT &rArr; TIM_CCxChannelCmd
 </UL>
 <BR>[Calls]<UL><LI><a href="#[70]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Rising_Edge_Event
@@ -621,7 +621,7 @@ Global Symbols
 <LI><a href="#[9b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;MX_TIM2_Init
 </UL>
 
-<P><STRONG><a name="[7b]"></a>HAL_TIM_OC_DelayElapsedCallback</STRONG> (Thumb, 92 bytes, Stack size 8 bytes, main.o(i.HAL_TIM_OC_DelayElapsedCallback))
+<P><STRONG><a name="[7b]"></a>HAL_TIM_OC_DelayElapsedCallback</STRONG> (Thumb, 126 bytes, Stack size 8 bytes, main.o(i.HAL_TIM_OC_DelayElapsedCallback))
 <BR><BR>[Stack]<UL><LI>Max Depth = 52<LI>Call Chain = HAL_TIM_OC_DelayElapsedCallback &rArr; Treat_Int &rArr; Program_Inverter_Pulse &rArr; HAL_TIM_OC_Start_IT &rArr; TIM_CCxChannelCmd
 </UL>
 <BR>[Calls]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Treat_Int
@@ -792,7 +792,7 @@ Global Symbols
 <P><STRONG><a name="[f]"></a>RCC_IRQHandler</STRONG> (Thumb, 2 bytes, Stack size 0 bytes, stm32f1xx_it.o(i.RCC_IRQHandler))
 <BR>[Address Reference Count : 1]<UL><LI> startup_stm32f103xb.o(RESET)
 </UL>
-<P><STRONG><a name="[70]"></a>Rising_Edge_Event</STRONG> (Thumb, 92 bytes, Stack size 8 bytes, main.o(i.Rising_Edge_Event))
+<P><STRONG><a name="[70]"></a>Rising_Edge_Event</STRONG> (Thumb, 96 bytes, Stack size 8 bytes, main.o(i.Rising_Edge_Event))
 <BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = Rising_Edge_Event &rArr; Program_Trigger_Pulse &rArr; HAL_TIM_OC_Start_IT &rArr; TIM_CCxChannelCmd
 </UL>
 <BR>[Calls]<UL><LI><a href="#[48]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_ReadCapturedValue
@@ -812,7 +812,7 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_GPIO_TogglePin
 </UL>
-<BR>[Called By]<UL><LI><a href="#[a6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Pulse_Program
+<BR>[Called By]<UL><LI><a href="#[86]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Treat_Int
 </UL>
 
 <P><STRONG><a name="[a2]"></a>Set_Ouput_Inversor</STRONG> (Thumb, 32 bytes, Stack size 8 bytes, main.o(i.Set_Ouput_Inversor))
@@ -842,12 +842,11 @@ Global Symbols
 <LI><a href="#[47]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Falling_Edge_Event
 </UL>
 
-<P><STRONG><a name="[a6]"></a>Set_Pulse_Program</STRONG> (Thumb, 200 bytes, Stack size 8 bytes, main.o(i.Set_Pulse_Program))
-<BR><BR>[Stack]<UL><LI>Max Depth = 16<LI>Call Chain = Set_Pulse_Program &rArr; Set_Ouput_InterruptionTest
+<P><STRONG><a name="[a6]"></a>Set_Pulse_Program</STRONG> (Thumb, 192 bytes, Stack size 4 bytes, main.o(i.Set_Pulse_Program))
+<BR><BR>[Stack]<UL><LI>Max Depth = 4<LI>Call Chain = Set_Pulse_Program
 </UL>
 <BR>[Calls]<UL><LI><a href="#[a8]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;predictionCalc
 <LI><a href="#[a7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;calculationEngineSpeed
-<LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Ouput_InterruptionTest
 </UL>
 <BR>[Called By]<UL><LI><a href="#[35]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 </UL>
@@ -939,12 +938,13 @@ Global Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> main.o(i.main)
 </UL>
-<P><STRONG><a name="[86]"></a>Treat_Int</STRONG> (Thumb, 102 bytes, Stack size 8 bytes, main.o(i.Treat_Int))
+<P><STRONG><a name="[86]"></a>Treat_Int</STRONG> (Thumb, 106 bytes, Stack size 8 bytes, main.o(i.Treat_Int))
 <BR><BR>[Stack]<UL><LI>Max Depth = 44<LI>Call Chain = Treat_Int &rArr; Program_Inverter_Pulse &rArr; HAL_TIM_OC_Start_IT &rArr; TIM_CCxChannelCmd
 </UL>
 <BR>[Calls]<UL><LI><a href="#[89]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_OC_Stop_IT
 <LI><a href="#[49]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Ouput_Trigger
 <LI><a href="#[a2]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Ouput_Inversor
+<LI><a href="#[a3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Set_Ouput_InterruptionTest
 <LI><a href="#[4a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Program_Inverter_Pulse
 </UL>
 <BR>[Called By]<UL><LI><a href="#[7b]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;HAL_TIM_OC_DelayElapsedCallback
