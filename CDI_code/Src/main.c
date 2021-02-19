@@ -54,7 +54,7 @@ DMA_HandleTypeDef hdma_usart3_tx;
 #define TDuty_Trigger_const         1309u     //1.0ms for clock 72MHz
 #define TDutyTriggerK               1319u     //10 + 1319
 #define TIntervPulseInv              655u     //1964u     //1.0ms + 0.5ms
-#define TPulseInv                   6460u     //3,5ms measured...
+#define TPulseInv                   4582u     //3,5ms measured...
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
 #define FALSE                          0u
@@ -69,7 +69,7 @@ enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} 
 enum Event_status {EMPTY, PROGRAMMED} status;
 enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
 enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE, DATA_AVAILABLE_RX_BUFFER} transmstatus;
-enum pulseManagement {LOW, HIGH} pulseMngmt;
+enum engineSpeed {LOW, HIGH} pulseMngmt;
 
 /*
 2 different speed
@@ -93,7 +93,7 @@ typedef struct Calibration
 
 volatile struct_Calibration Calibration_RAM = {15000,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
-                                              {1250, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
+                                              {1300, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
 																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
                                               //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
@@ -135,19 +135,12 @@ typedef struct timerproperty
 
 typedef struct pulseManagement
 {
-    pulseMngmt engSpeed;
-    timer_status Pulse_Program[4];
+    uint8_t engSpeed;
+    timer_status timerCtrl[4];
 }programSheet;
 
-programSheet request = {0, {0,0},
-                           {0,0},
-                           {0,0},
-                           {0,0}};
-
-programSheet Pulse_Program = { 0, {0,0},
-                                  {0,0},
-                                  {0,0},
-                                  {0,0}};
+programSheet request = {0, {{0,0}, {0,0}, {0,0}, {0,0}}};
+programSheet Pulse_Program = { 0, {{0,0}, {0,0}, {0,0}, {0,0}}};
 
 typedef struct Scheduler
 {
@@ -580,7 +573,7 @@ void Set_Pulse_Program(void)
 {
     static uint32_t Event1, Event2, Event3, Event4;
 
-    //Set_Ouput_InterruptionTest();
+    Set_Ouput_InterruptionTest();
 
     scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
 
@@ -614,16 +607,16 @@ void Set_Pulse_Program(void)
         Event4 = Event3+TPulseInv;
 
         //Event 1 - Generates Rising Edge for trigger signal using TMR4 to generate the event
-        request[0].counter = Event1%65536u;
+        request.timerCtrl[0].counter = Event1%65536u;
 
         //Event 2 - Generates Falling Edge for trigger signal using TMR4 to generate the event
-        request[1].counter = Event2%65536u;
+        request.timerCtrl[1].counter = Event2%65536u;
 
         //Event 3 - Generates Rising Edge for inversor signal using TMR4 to generate the event
-        request[2].counter = Event3%65536u;
+        request.timerCtrl[2].counter = Event3%65536u;
 
         //Event 4 - Generates Falling Edge for inversor signal using TMR2 to generate the event
-        request[3].counter = Event4%65536u;
+        request.timerCtrl[3].counter = Event4%65536u;
     }
     else if(scenario.Measured_Period<EngineSpeedPeriod_Max)
     {
@@ -636,11 +629,12 @@ void Set_Pulse_Program(void)
         //maybe I don´t need to register this because will happening all engine start event
     }
 
-    Pulse_Program[0].timer_program = EMPTY;
-    Pulse_Program[1].timer_program = EMPTY;
-    Pulse_Program[2].timer_program = EMPTY;
-    Pulse_Program[3].timer_program = EMPTY;
-    //Set_Ouput_InterruptionTest();
+    Pulse_Program.timerCtrl[0].timer_program = EMPTY;
+    Pulse_Program.timerCtrl[1].timer_program = EMPTY;
+    Pulse_Program.timerCtrl[2].timer_program = EMPTY;
+    Pulse_Program.timerCtrl[3].timer_program = EMPTY;
+		
+    Set_Ouput_InterruptionTest();
 }
 
 /* USER CODE END PFP */
@@ -767,7 +761,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -780,7 +774,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB busses clocks 
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -810,7 +804,6 @@ static void MX_TIM2_Init(void)
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_IC_InitTypeDef sConfigIC = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM2_Init 1 */
 
@@ -834,10 +827,6 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_OC_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
@@ -856,18 +845,6 @@ static void MX_TIM2_Init(void)
   sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
   sConfigIC.ICFilter = 0;
   if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_ACTIVE;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_LOW;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
   {
     Error_Handler();
   }
@@ -933,6 +910,16 @@ static void MX_TIM4_Init(void)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
@@ -972,10 +959,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/**
+/** 
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void)
+static void MX_DMA_Init(void) 
 {
 
   /* DMA controller clock enable */
@@ -1010,15 +997,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8
-                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4 
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8 
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12 
                           |GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12 
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
                           |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
@@ -1034,11 +1021,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA3 PA4 PA5
-                           PA7 PA8 PA9 PA10
+  /*Configure GPIO pins : PA1 PA3 PA4 PA5 
+                           PA7 PA8 PA9 PA10 
                            PA11 PA12 PA15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1059,11 +1046,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB12 PB13 PB14
-                           PB15 PB3 PB4 PB5
+  /*Configure GPIO pins : PB2 PB12 PB13 PB14 
+                           PB15 PB3 PB4 PB5 
                            PB6 PB7 PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
                           |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1076,29 +1063,27 @@ static void MX_GPIO_Init(void)
 
 void Pulse_Generator_Scheduler(void)
 {
-    uint8_t i;
-
-    Pulse_Program.engSpeed = request.engSpeed;
+    uint8_t i;    
 
     for(i=0;i<4;i++)
     {
-       Pulse_Program[i].counter = request[i].counter;
+       Pulse_Program.timerCtrl[i].counter = request.timerCtrl[i].counter;
     }
 
     Set_Ouput_Trigger(OFF);
     Set_Ouput_Inversor(OFF);
 
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[0].counter);
-    Pulse_Program[0].timer_program = PROGRAMMED;
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program.timerCtrl[0].counter);
+    Pulse_Program.timerCtrl[0].timer_program = PROGRAMMED;
 
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[1].counter);
-    Pulse_Program[1].timer_program = PROGRAMMED;
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program.timerCtrl[1].counter);
+    Pulse_Program.timerCtrl[1].timer_program = PROGRAMMED;
 
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,Pulse_Program[2].counter);
-    Pulse_Program[2].timer_program = PROGRAMMED;
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,Pulse_Program.timerCtrl[2].counter);
+    Pulse_Program.timerCtrl[2].timer_program = PROGRAMMED;
 
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,Pulse_Program[3].counter);
-    Pulse_Program[3].timer_program = PROGRAMMED;
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,Pulse_Program.timerCtrl[3].counter);
+    Pulse_Program.timerCtrl[3].timer_program = PROGRAMMED;
 
     __HAL_TIM_SET_COUNTER(&htim4,0u);
     HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1);
@@ -1121,7 +1106,8 @@ void Rising_Edge_Event(void)
     scenario.nOverflow_RE = scenario.nOverflow;
     __HAL_TIM_SET_COUNTER(&htim2,0u);
     scenario.nOverflow = 0u;
-
+    Pulse_Program.engSpeed = request.engSpeed;
+	
     if (Pulse_Program.engSpeed == HIGH)
     {
         Pulse_Generator_Scheduler();
@@ -1166,19 +1152,19 @@ void Treat_Int(uint8_t program)
     switch(program)
     {
         case INT_FROM_CH1: Set_Ouput_Trigger(ON);
-                           Pulse_Program[0].timer_program = EMPTY;
+                           Pulse_Program.timerCtrl[0].timer_program = EMPTY;
                            break;
 
         case INT_FROM_CH2: Set_Ouput_Trigger(OFF);
-                           Pulse_Program[1].timer_program = EMPTY;
+                           Pulse_Program.timerCtrl[1].timer_program = EMPTY;
                            break;
 
         case INT_FROM_CH3: Set_Ouput_Inversor(ON);
-                           Pulse_Program[2].timer_program = EMPTY;
+                           Pulse_Program.timerCtrl[2].timer_program = EMPTY;
                            break;
 
         case INT_FROM_CH4: Set_Ouput_Inversor(OFF);
-                           Pulse_Program[3].timer_program = EMPTY;
+                           Pulse_Program.timerCtrl[3].timer_program = EMPTY;
                            HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
                            HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
                            HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_3);
@@ -1239,7 +1225,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{
+{ 
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
