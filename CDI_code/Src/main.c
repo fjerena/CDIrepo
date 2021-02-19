@@ -66,9 +66,10 @@ DMA_HandleTypeDef hdma_usart3_tx;
 
 //Global variable
 enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
-enum Event_status {EMPTY, PROGRAMMED, DONE} status;
+enum Event_status {EMPTY, PROGRAMMED} status;
 enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
 enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE, DATA_AVAILABLE_RX_BUFFER} transmstatus;
+enum pulseManagement {LOW, HIGH} pulseMngmt;
 
 /*
 2 different speed
@@ -100,34 +101,31 @@ volatile struct_Calibration Calibration_RAM = {15000,
 																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
 																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64},90,80,10};
 																							{  64,   54,   44,   32,   15,    0,    0,   36,   40,   45,     55,     64},90,80,10};
-																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18																							
+																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18
 typedef struct system_info
 {
-	  uint16_t teste;
-	  uint8_t  igPos;
-	  uint16_t Engine_Speed_old;
+    uint16_t Engine_Speed_old;
     uint16_t Engine_Speed;
-	  uint16_t engineSpeedPred;
-	  uint16_t engineSpeedFiltered;
-	  uint16_t avarageEngineSpeed;
+    uint16_t engineSpeedPred;
+    uint16_t engineSpeedFiltered;
+    uint16_t avarageEngineSpeed;
     int32_t  deltaEngineSpeed;
-	  uint32_t Rising_Edge_Counter;
-	  uint32_t Measured_Period;
+    uint32_t Rising_Edge_Counter;
+    uint32_t Measured_Period;
     uint32_t TDuty_Input_Signal;
     uint32_t tdutyInputSignalPred;
-	  uint32_t tdutyInputSignalPredLinear;
-	  uint8_t  sensorWindow;
-	  uint32_t TStep;
-    uint8_t  nAdv;    
-    uint8_t  Low_speed_detected;
+    uint32_t tdutyInputSignalPredLinear;
+    uint8_t  sensorWindow;
+    uint32_t TStep;
+    uint8_t  nAdv;
     uint8_t  Cutoff_IGN;
     uint8_t  Update_calc;
-    uint32_t nOverflow;    
+    uint32_t nOverflow;
     uint8_t  nOverflow_RE;
-    uint8_t  nOverflow_FE;   
+    uint8_t  nOverflow_FE;
 }system_vars;
 
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 typedef struct timerproperty
 {
@@ -135,15 +133,21 @@ typedef struct timerproperty
     uint8_t  timer_program;
 }timer_status;
 
-timer_status request[4] = {{0,0},
+typedef struct pulseManagement
+{
+    pulseMngmt engSpeed;
+    timer_status Pulse_Program[4];
+}programSheet;
+
+programSheet request = {0, {0,0},
                            {0,0},
                            {0,0},
                            {0,0}};
 
-timer_status Pulse_Program[4] = {{0,0},
-                                 {0,0},
-                                 {0,0},
-                                 {0,0}};
+programSheet Pulse_Program = { 0, {0,0},
+                                  {0,0},
+                                  {0,0},
+                                  {0,0}};
 
 typedef struct Scheduler
 {
@@ -244,8 +248,8 @@ uint8_t binarySearch(volatile uint16_t array[], uint8_t first, uint8_t last, uin
 
         middle = (first + last)>>1;
     }
-		
-		return (255u);
+
+    return (255u);
 }
 
 //This function was prepared to return a 8 bits value, however is saturated  in 64
@@ -421,7 +425,7 @@ uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
 {
     static uint8_t varOld = 0u;
     uint8_t varFiltered;
-    
+
     varFiltered = var + (((varOld-var)*k)/255u);
     varOld = var;
 
@@ -432,7 +436,7 @@ uint16_t digitalFilter16bits(uint16_t var, uint8_t k)
 {
     static uint16_t varOld = 0u;
     uint16_t varFiltered;
-    
+
     varFiltered = var + (((varOld-var)*k)/255u);
     varOld = var;
 
@@ -524,21 +528,21 @@ void calculationEngineSpeed(volatile system_vars *var)
     if((var->Engine_Speed<<1)>var->Engine_Speed_old)
     {
         var->engineSpeedPred = (var->Engine_Speed<<1)-var->Engine_Speed_old;
-			  if(var->engineSpeedPred>0)
-				{	
-					var->tdutyInputSignalPredLinear = (RPM_const*28u)/(var->engineSpeedPred*360u);
-				}
-				else
-				{	
-					var->tdutyInputSignalPredLinear = EngineSpeedPeriod_Min;
-				}	
+        if(var->engineSpeedPred>0)
+        {
+            var->tdutyInputSignalPredLinear = (RPM_const*28u)/(var->engineSpeedPred*360u);
+        }
+        else
+        {
+            var->tdutyInputSignalPredLinear = EngineSpeedPeriod_Min;
+        }
     }
     else
     {
         var->engineSpeedPred = 0u;
     }
-		
-		var->Engine_Speed_old = var->Engine_Speed;
+
+    var->Engine_Speed_old = var->Engine_Speed;
 }
 
 uint32_t predictionCalc(uint32_t period)
@@ -555,10 +559,10 @@ uint32_t predictionCalc(uint32_t period)
     errt = period - dtpred;
 
     //alpha-beta-gamma filter prediction
-    dts = dtpred + ((Calibration_RAM.alpha * errt) / 100);
-    tddts = tddtpred + ((Calibration_RAM.beta * errt) / 100);
-    t2dddts = t2dddts + ((Calibration_RAM.gamma * errt) / 100);
-    dtpred = dts + tddts + (t2dddts >> 1);
+    dts = dtpred + ((Calibration_RAM.alpha * errt) / 100u);
+    tddts = tddtpred + ((Calibration_RAM.beta * errt) / 100u);
+    t2dddts = t2dddts + ((Calibration_RAM.gamma * errt) / 100u);
+    dtpred = dts + tddts + (t2dddts >> 1u);
     tddtpred = tddts + t2dddts;
 
     return(tddtpred);
@@ -574,9 +578,9 @@ uint8_t Ignition_nTime(uint16_t eng_speed)
 
 void Set_Pulse_Program(void)
 {
-    static uint32_t Event1, Event2;
-	
-		//Set_Ouput_InterruptionTest();
+    static uint32_t Event1, Event2, Event3, Event4;
+
+    //Set_Ouput_InterruptionTest();
 
     scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
 
@@ -588,27 +592,38 @@ void Set_Pulse_Program(void)
 
         if(scenario.Engine_Speed>=Calibration_RAM.BP_Engine_Speed[0])
         {
-						scenario.igPos = 1u;    
-            scenario.Low_speed_detected = OFF;
+            request.engSpeed = HIGH;
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
             scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
             //scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
-					  scenario.nAdv = 32u;
+            scenario.nAdv = 32u;
             Event1 = scenario.TStep*scenario.nAdv;
-            Event2 = Event1+TDuty_Trigger_const;
-
-            //Event 1 - Generates Rising Edge for trigger signal using TMR2 to generate the event
-            request[0].counter = Event1%65536u;
-
-            //Event 2 - Generates Falling Edge for trigger signal using TMR2 to generate the event
-            request[1].counter = Event2%65536u;					  
         }
         else
-        { 	
-						scenario.igPos = 0u;
-            scenario.Low_speed_detected = ON;
+        {
+            //Will be trigger at the same routine that treats the falling edge detection
+            request.engSpeed = LOW;
+            //This value was set to generate the rising edge pulse immediately
+            scenario.nAdv = 0u;
+            Event1 = 0u;
         }
+
+        Event2 = Event1+TDuty_Trigger_const;
+        Event3 = Event2+TIntervPulseInv;
+        Event4 = Event3+TPulseInv;
+
+        //Event 1 - Generates Rising Edge for trigger signal using TMR4 to generate the event
+        request[0].counter = Event1%65536u;
+
+        //Event 2 - Generates Falling Edge for trigger signal using TMR4 to generate the event
+        request[1].counter = Event2%65536u;
+
+        //Event 3 - Generates Rising Edge for inversor signal using TMR4 to generate the event
+        request[2].counter = Event3%65536u;
+
+        //Event 4 - Generates Falling Edge for inversor signal using TMR2 to generate the event
+        request[3].counter = Event4%65536u;
     }
     else if(scenario.Measured_Period<EngineSpeedPeriod_Max)
     {
@@ -622,11 +637,10 @@ void Set_Pulse_Program(void)
     }
 
     Pulse_Program[0].timer_program = EMPTY;
-		Pulse_Program[1].timer_program = EMPTY;
-		Pulse_Program[2].timer_program = EMPTY;
-		Pulse_Program[3].timer_program = EMPTY;
-		
-		//Set_Ouput_InterruptionTest();
+    Pulse_Program[1].timer_program = EMPTY;
+    Pulse_Program[2].timer_program = EMPTY;
+    Pulse_Program[3].timer_program = EMPTY;
+    //Set_Ouput_InterruptionTest();
 }
 
 /* USER CODE END PFP */
@@ -753,7 +767,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -766,7 +780,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -958,10 +972,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -996,15 +1010,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4 
-                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8 
-                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
                           |GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12 
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
                           |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
@@ -1020,11 +1034,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA3 PA4 PA5 
-                           PA7 PA8 PA9 PA10 
+  /*Configure GPIO pins : PA1 PA3 PA4 PA5
+                           PA7 PA8 PA9 PA10
                            PA11 PA12 PA15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1045,11 +1059,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB12 PB13 PB14 
-                           PB15 PB3 PB4 PB5 
+  /*Configure GPIO pins : PB2 PB12 PB13 PB14
+                           PB15 PB3 PB4 PB5
                            PB6 PB7 PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
                           |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1060,31 +1074,37 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void Program_Trigger_Pulse(void)
+void Pulse_Generator_Scheduler(void)
 {
-    Pulse_Program[0].counter = request[0].counter;
-    __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_3,Pulse_Program[0].counter);
+    uint8_t i;
+
+    Pulse_Program.engSpeed = request.engSpeed;
+
+    for(i=0;i<4;i++)
+    {
+       Pulse_Program[i].counter = request[i].counter;
+    }
+
+    Set_Ouput_Trigger(OFF);
+    Set_Ouput_Inversor(OFF);
+
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,Pulse_Program[0].counter);
     Pulse_Program[0].timer_program = PROGRAMMED;
 
-    Pulse_Program[1].counter = request[1].counter;
-    __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,Pulse_Program[1].counter);
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,Pulse_Program[1].counter);
     Pulse_Program[1].timer_program = PROGRAMMED;
 
-    HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_3);
-    HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
-}
-
-void Program_Inverter_Pulse(void)
-{
-	  __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_1,TIntervPulseInv);
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,Pulse_Program[2].counter);
     Pulse_Program[2].timer_program = PROGRAMMED;
 
-    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_2,TPulseInv);
+    __HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_4,Pulse_Program[3].counter);
     Pulse_Program[3].timer_program = PROGRAMMED;
 
     __HAL_TIM_SET_COUNTER(&htim4,0u);
     HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_1);
     HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_2);
+    HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_3);
+    HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_4);
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
@@ -1097,54 +1117,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void Rising_Edge_Event(void)
 {
-	  scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);
+    scenario.Measured_Period = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_1);
     scenario.nOverflow_RE = scenario.nOverflow;
     __HAL_TIM_SET_COUNTER(&htim2,0u);
     scenario.nOverflow = 0u;
-    Set_Ouput_Trigger(OFF);
-    Set_Ouput_Inversor(OFF);
-    scenario.Rising_Edge_Counter++;	  
-	
-	  //scenario.teste = 1;
 
-    //if((scenario.Low_speed_detected == OFF)&&
-		if((scenario.igPos != 0u)&&	
-	  //if((scenario.nOverflow_RE == 0u)&&
-       (scenario.Cutoff_IGN == OFF))
+    if (Pulse_Program.engSpeed == HIGH)
     {
-			  scenario.teste = 0;
-        Program_Trigger_Pulse();
-			  //scenario.teste = 1u;
+        Pulse_Generator_Scheduler();
     }
-    else 
-    {
-        HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_3);
-        HAL_TIM_OC_Stop_IT(&htim2,TIM_CHANNEL_4);
-			  //scenario.teste = 0u;
-    }
+
+    scenario.Rising_Edge_Counter++;
 }
 
 void Falling_Edge_Event(void)
 {
-    uint16_t counter;
-
     scenario.TDuty_Input_Signal = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_2);
     scenario.nOverflow_FE = scenario.nOverflow;
 
-    //if(scenario.Low_speed_detected == ON)
-		//if((scenario.igPos == 0u)&&(Pulse_Program[1].timer_program != PROGRAMMED))
-	  if(scenario.igPos == 0u)
-	  //if(scenario.nOverflow_RE != 0u)
+    if (Pulse_Program.engSpeed == LOW)
     {
-			  Set_Ouput_Trigger(ON);
-        Program_Inverter_Pulse();			  
-        counter = __HAL_TIM_GET_COUNTER(&htim2);
-			  counter += TDutyTriggerK;
-        __HAL_TIM_SET_COMPARE(&htim2,TIM_CHANNEL_4,counter);
-			  HAL_TIM_OC_Start_IT(&htim2,TIM_CHANNEL_4);
+        Pulse_Generator_Scheduler();
     }
 
-    if (scenario.Rising_Edge_Counter>=2)
+    if (scenario.Rising_Edge_Counter>=2u)
     {
         scenario.Update_calc = TRUE;        //set zero after Engine Stop was detected
     }
@@ -1155,7 +1151,6 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
     if((htim->Instance == TIM2)&&
        (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
     {
-			  scenario.teste = 1;
         Rising_Edge_Event();
     }
 
@@ -1170,61 +1165,34 @@ void Treat_Int(uint8_t program)
 {
     switch(program)
     {
-        case INT_FROM_CH1: Set_Ouput_Inversor(ON);
-                           Pulse_Program[2].timer_program = DONE;
-			                     
+        case INT_FROM_CH1: Set_Ouput_Trigger(ON);
+                           Pulse_Program[0].timer_program = EMPTY;
                            break;
 
-        case INT_FROM_CH2: Set_Ouput_Inversor(OFF);
-                           Pulse_Program[3].timer_program = DONE;
+        case INT_FROM_CH2: Set_Ouput_Trigger(OFF);
+                           Pulse_Program[1].timer_program = EMPTY;
+                           break;
+
+        case INT_FROM_CH3: Set_Ouput_Inversor(ON);
+                           Pulse_Program[2].timer_program = EMPTY;
+                           break;
+
+        case INT_FROM_CH4: Set_Ouput_Inversor(OFF);
+                           Pulse_Program[3].timer_program = EMPTY;
                            HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
                            HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
+                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_3);
+                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_4);
                            break;
 
-        case INT_FROM_CH3: Set_Ouput_Trigger(ON);
-                           Pulse_Program[0].timer_program = DONE;
-													 Set_Ouput_InterruptionTest();                           
-                           break;
-
-        case INT_FROM_CH4: Set_Ouput_Trigger(OFF);
-                           Pulse_Program[1].timer_program = DONE;
-			                     
-			                     Program_Inverter_Pulse();
-                           break;
-
-        default:           break;
+        default          : break;
     }
 }
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	  scenario.teste = __HAL_TIM_GET_COUNTER(&htim2);
-	
-    if((htim->Instance == TIM2)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)&&
-       //(scenario.nOverflow_RE == 0))
-		   (scenario.igPos != 0u)&&
-		   (scenario.teste > 300))
-		   //(scenario.nOverflow_RE == 0))
-		   //(scenario.teste == 1))
-    {
-        Treat_Int(INT_FROM_CH3);
-				scenario.teste = 0;
-    }
-
-    if((htim->Instance == TIM2)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4))//&&
-       //(scenario.nOverflow == 0))
-		   //(scenario.igPos == 1u))
-    {
-        Treat_Int(INT_FROM_CH4);
-    }
-
     if((htim->Instance == TIM4)&&
-       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)&&
-		   (Pulse_Program[1].timer_program == DONE))  //### I need to understand why I need to use this to eliminate the
-																								  // the twice execution for INT_FROM_CH1
-       //(scenario.nOverflow_RE == 0))
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1))
     {
         Treat_Int(INT_FROM_CH1);
     }
@@ -1233,6 +1201,18 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim)
        (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2))
     {
         Treat_Int(INT_FROM_CH2);
+    }
+
+    if((htim->Instance == TIM4)&&
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3))
+    {
+        Treat_Int(INT_FROM_CH3);
+    }
+
+    if((htim->Instance == TIM4)&&
+       (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4))
+    {
+        Treat_Int(INT_FROM_CH4);
     }
 }
 
@@ -1259,7 +1239,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
