@@ -80,8 +80,7 @@ Engine Speed: Stopped, Acceleration, Steady State, Decelerate
 Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
 */
 
-//Calibration values
-typedef struct Calibration
+typedef struct
 {
     uint16_t Max_Engine_Speed;
     uint16_t BP_Engine_Speed[12];
@@ -89,19 +88,30 @@ typedef struct Calibration
     uint8_t  alpha;
     uint8_t  beta;
     uint8_t  gamma;
-}struct_Calibration;
+}dataCalibration;
 
-volatile struct_Calibration Calibration_RAM = {15000,
+#define blockSize sizeof (dataCalibration)
+
+typedef union 
+{
+   dataCalibration Calibration_RAM;
+   uint8_t array_Calibration_RAM[blockSize];
+}calibrationBlock;
+
+static const calibrationBlock Initial_Calibration = {4600,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
-                                              {1300, 2000, 3000, 3500, 4500, 5000, 6000, 7000, 8000, 9000, 12000, 15000},
+                                              {1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
 																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
                                               //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
                                               //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16},90,80,10};
 																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
 																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64},90,80,10};
-																							{  64,   54,   44,   32,   15,    0,    0,   36,   40,   45,     55,     64},90,80,10};
-																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+18
+																							{  64,   58,   48,   38,   25,   15,    0,    0,   40,   45,     55,     64},90,80,10};
+																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+
+																							
+calibrationBlock calibFlashBlock;	
+																							
 typedef struct system_info
 {
     uint16_t Engine_Speed_old;
@@ -111,6 +121,8 @@ typedef struct system_info
     uint16_t avarageEngineSpeed;
     int32_t  deltaEngineSpeed;
     uint32_t Rising_Edge_Counter;
+	  uint32_t triggerEventCounter;
+    uint32_t inversorEventCounter;
     uint32_t Measured_Period;
     uint32_t TDuty_Input_Signal;
     uint32_t tdutyInputSignalPred;
@@ -125,7 +137,7 @@ typedef struct system_info
     uint8_t  nOverflow_FE;
 }system_vars;
 
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 typedef struct timerproperty
 {
@@ -167,6 +179,16 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
+														
+void initializeFlashBlock(void)
+{	
+	  uint8_t i;
+	
+	  for(i=0;i<sizeof(dataCalibration);i++)
+	  {
+				calibFlashBlock.array_Calibration_RAM[i] = Initial_Calibration.array_Calibration_RAM[i];			  
+		}	
+}	
 
 void Turn_OFF_Int_input(void)
 {
@@ -281,7 +303,7 @@ uint8_t linearInterpolation(uint16_t value, volatile uint16_t x_array[], volatil
 
 void Cut_Igntion(void)
 {
-    if(scenario.Engine_Speed>Calibration_RAM.Max_Engine_Speed)
+    if(scenario.Engine_Speed>calibFlashBlock.Calibration_RAM.Max_Engine_Speed)
     {
         scenario.Cutoff_IGN = ON;
     }
@@ -398,6 +420,16 @@ void Checksum(uint8_t strg[], uint8_t strg_length)
     strg[(strg_length)-1u]=result;
 }
 
+void applyCalibration(uint8_t *buffer)
+{	
+	  uint8_t i;
+	
+	  for(i=0;i<sizeof(dataCalibration);i++)
+	  {
+				calibFlashBlock.array_Calibration_RAM[i] = buffer[i];			  
+		}	
+}	
+
 void Data_Transmission(void)
 {
     ConvertNum4DigToStr(scenario.Engine_Speed, UART3_txBuffer, 0u);
@@ -462,7 +494,7 @@ uint8_t Data_Reception(uint8_t strg[])
     {
         for(j=0;j<34;j=j+3)
         {
-            Calibration_RAM.BP_Timing_Advance[k]=(((strg[j]-48u)*100u)+((strg[j+1]-48u)*10u)+((strg[j+2]-48u*1u)));
+            calibFlashBlock.Calibration_RAM.BP_Timing_Advance[k]=(((strg[j]-48u)*100u)+((strg[j+1]-48u)*10u)+((strg[j+2]-48u*1u)));
             k++;
         }
 
@@ -483,9 +515,9 @@ void Task_Medium(void)
 {
     Set_Ouput_LED();
     Cut_Igntion();
-    //Data_Reception(UART3_rxBuffer);
-    //Data_Transmission1();
-    //Statistics();
+    Data_Reception(UART3_rxBuffer);
+    Data_Transmission1();
+    Statistics();
 }
 
 void Task_Slow(void)
@@ -512,32 +544,6 @@ void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t
     }
 }
 
-void calculationEngineSpeed(volatile system_vars *var)
-{
-    var->Engine_Speed = RPM_const/var->Measured_Period;
-    var->deltaEngineSpeed = var->Engine_Speed-var->Engine_Speed_old;
-
-    //Linear prediction
-    if((var->Engine_Speed<<1)>var->Engine_Speed_old)
-    {
-        var->engineSpeedPred = (var->Engine_Speed<<1)-var->Engine_Speed_old;
-        if(var->engineSpeedPred>0)
-        {
-            var->tdutyInputSignalPredLinear = (RPM_const*28u)/(var->engineSpeedPred*360u);
-        }
-        else
-        {
-            var->tdutyInputSignalPredLinear = EngineSpeedPeriod_Min;
-        }
-    }
-    else
-    {
-        var->engineSpeedPred = 0u;
-    }
-
-    var->Engine_Speed_old = var->Engine_Speed;
-}
-
 uint32_t predictionCalc(uint32_t period)
 {
 //http://www.mstarlabs.com/control/engspeed.html
@@ -552,9 +558,9 @@ uint32_t predictionCalc(uint32_t period)
     errt = period - dtpred;
 
     //alpha-beta-gamma filter prediction
-    dts = dtpred + ((Calibration_RAM.alpha * errt) / 100u);
-    tddts = tddtpred + ((Calibration_RAM.beta * errt) / 100u);
-    t2dddts = t2dddts + ((Calibration_RAM.gamma * errt) / 100u);
+    dts = dtpred + ((calibFlashBlock.Calibration_RAM.alpha * errt) / 100u);
+    tddts = tddtpred + ((calibFlashBlock.Calibration_RAM.beta * errt) / 100u);
+    t2dddts = t2dddts + ((calibFlashBlock.Calibration_RAM.gamma * errt) / 100u);
     dtpred = dts + tddts + (t2dddts >> 1u);
     tddtpred = tddts + t2dddts;
 
@@ -565,7 +571,7 @@ uint8_t Ignition_nTime(uint16_t eng_speed)
 {
     static uint8_t advance;
 
-    advance = linearInterpolation(eng_speed, Calibration_RAM.BP_Engine_Speed, Calibration_RAM.BP_Timing_Advance);
+    advance = linearInterpolation(eng_speed, calibFlashBlock.Calibration_RAM.BP_Engine_Speed, calibFlashBlock.Calibration_RAM.BP_Timing_Advance);
     return(advance);
 }
 
@@ -578,19 +584,37 @@ void Set_Pulse_Program(void)
     scenario.Measured_Period += scenario.nOverflow_RE*TMR2_16bits;
 
     //Engine speed must be greater than 100rpm and less than 15000rpm to consider Measured_Period useful for calculations
-    if((EngineSpeedPeriod_Min>=scenario.Measured_Period)&&
+    if((scenario.Measured_Period<=EngineSpeedPeriod_Min)&&
        (scenario.Measured_Period>=EngineSpeedPeriod_Max))
     {
-        calculationEngineSpeed(&scenario);
+        scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
+				scenario.Engine_Speed_old = scenario.Engine_Speed;
+				scenario.deltaEngineSpeed = scenario.Engine_Speed-scenario.Engine_Speed_old;
 
-        if(scenario.Engine_Speed>=Calibration_RAM.BP_Engine_Speed[0])
+				//Linear prediction
+				if((scenario.Engine_Speed<<1)>scenario.Engine_Speed_old)
+				{
+					scenario.engineSpeedPred = (scenario.Engine_Speed<<1)-scenario.Engine_Speed_old;
+					//Improvements: define these engine speed or calculate based on period already existent
+					//change 28 for learned value			
+					scenario.tdutyInputSignalPredLinear = (RPM_const*28u)/(scenario.engineSpeedPred*360u);        
+				}
+				else
+				{
+					scenario.engineSpeedPred = 0u;
+				}				
+				
+				//For calculus purpose I decided to use the linear prediction
+				scenario.Engine_Speed = scenario.engineSpeedPred;
+
+        if(scenario.Engine_Speed>=calibFlashBlock.Calibration_RAM.BP_Engine_Speed[0])
         {
             request.engSpeed = HIGH;
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
-            scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
-            //scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
-            scenario.nAdv = 32u;
+					  //scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
+            scenario.TStep = scenario.tdutyInputSignalPredLinear/nSteps;
+            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);            
             Event1 = scenario.TStep*scenario.nAdv;
         }
         else
@@ -669,7 +693,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+  initializeFlashBlock();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -1092,6 +1116,14 @@ void Pulse_Generator_Scheduler(void)
     HAL_TIM_OC_Start_IT(&htim4,TIM_CHANNEL_4);
 }
 
+void TurnOffAllPulseInt(void)
+{	
+		HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
+    HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
+    HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_3);
+    HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_4);
+}	
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if(htim->Instance == TIM2)
@@ -1108,7 +1140,8 @@ void Rising_Edge_Event(void)
     scenario.nOverflow = 0u;
     Pulse_Program.engSpeed = request.engSpeed;
 	
-    if (Pulse_Program.engSpeed == HIGH)
+    if((Pulse_Program.engSpeed == HIGH)&&
+			 (scenario.Cutoff_IGN == OFF))
     {
         Pulse_Generator_Scheduler();
     }
@@ -1121,7 +1154,8 @@ void Falling_Edge_Event(void)
     scenario.TDuty_Input_Signal = HAL_TIM_ReadCapturedValue(&htim2,TIM_CHANNEL_2);
     scenario.nOverflow_FE = scenario.nOverflow;
 
-    if (Pulse_Program.engSpeed == LOW)
+    if((Pulse_Program.engSpeed == LOW)&&
+			 (scenario.Cutoff_IGN == OFF))
     {
         Pulse_Generator_Scheduler();
     }
@@ -1153,6 +1187,7 @@ void Treat_Int(uint8_t program)
     {
         case INT_FROM_CH1: Set_Ouput_Trigger(ON);
                            Pulse_Program.timerCtrl[0].timer_program = EMPTY;
+			                     scenario.triggerEventCounter++;
                            break;
 
         case INT_FROM_CH2: Set_Ouput_Trigger(OFF);
@@ -1161,14 +1196,12 @@ void Treat_Int(uint8_t program)
 
         case INT_FROM_CH3: Set_Ouput_Inversor(ON);
                            Pulse_Program.timerCtrl[2].timer_program = EMPTY;
+			                     scenario.inversorEventCounter++;
                            break;
 
         case INT_FROM_CH4: Set_Ouput_Inversor(OFF);
                            Pulse_Program.timerCtrl[3].timer_program = EMPTY;
-                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
-                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
-                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_3);
-                           HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_4);
+			                     TurnOffAllPulseInt();   			
                            break;
 
         default          : break;
