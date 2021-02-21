@@ -23,7 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "FLASH_PAGE.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -95,10 +95,11 @@ typedef struct
 typedef union 
 {
    dataCalibration Calibration_RAM;
-   uint8_t array_Calibration_RAM[blockSize];
+   uint32_t array_Calibration_RAM[blockSize>>2];
+	 uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
 
-static const calibrationBlock Initial_Calibration = {4600,
+static const calibrationBlock Initial_Calibration = {7500,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
                                               {1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000, 12000, 15000},
 																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
@@ -187,8 +188,18 @@ void initializeFlashBlock(void)
 	  for(i=0;i<sizeof(dataCalibration);i++)
 	  {
 				calibFlashBlock.array_Calibration_RAM[i] = Initial_Calibration.array_Calibration_RAM[i];			  
-		}	
+		}			
 }	
+
+void saveCalibRamToFlash(void)
+{	
+	  Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+}	
+
+void readCalibFlashToRAM(void)
+{	
+		Flash_Read_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+}
 
 void Turn_OFF_Int_input(void)
 {
@@ -693,7 +704,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  initializeFlashBlock();
+  readCalibFlashToRAM();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
