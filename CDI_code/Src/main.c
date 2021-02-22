@@ -57,8 +57,10 @@ DMA_HandleTypeDef hdma_usart3_tx;
 #define TPulseInv                   4582u     //3,5ms measured...
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
-#define FALSE, OFF                     0u
-#define TRUE, ON                       1u
+#define FALSE                          0u
+#define TRUE                           1u
+#define OFF                            0u
+#define ON                             1u
 #define EngineSpeedPeriod_Min     785455u     //100rpm
 #define EngineSpeedPeriod_Max       5236u     //15000rpm
 
@@ -66,7 +68,8 @@ DMA_HandleTypeDef hdma_usart3_tx;
 enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
 enum Event_status {EMPTY, PROGRAMMED} status;
 enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
-enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE, DATA_AVAILABLE_RX_BUFFER} transmstatus;
+enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE} transmstatus;
+enum Reception_Status {DATA_AVAILABLE_RX_BUFFER, RECEPTION_DONE} receptstatus;
 enum engineSpeed {LOW, HIGH} pulseMngmt;
 
 /*
@@ -209,14 +212,18 @@ void transmitCalibToUART(void)
     UART3_txBuffer[0] = 0x7E;
     checksum = UART3_txBuffer[0];
 
-    for (i=1,i<buffer_length-2,i++)
+    for (i=1;i<buffer_length-2;i++)
     {
-        UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
-        checksum += calibFlashBlock.array_Calibration_RAM[i];
+        UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
+        checksum += UART3_txBuffer[i];
     }
 
     UART3_txBuffer[buffer_length-1] = checksum;
+		transmstatus = TRANSMITING;
+    HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
 }
+
+void Data_Transmission(void);
 
 void receiveData(void)
 {
@@ -225,7 +232,7 @@ void receiveData(void)
     uint16_t buffer_length;
     uint16_t i;
 
-    if(transmstatus == DATA_AVAILABLE_RX_BUFFER)
+    if(receptstatus == DATA_AVAILABLE_RX_BUFFER)
     {
         buffer_length = sizeof(UART3_rxBuffer);
 
@@ -240,8 +247,8 @@ void receiveData(void)
 
             switch(command)
             {
-                case 0x01:  transmitCalibToUART();
-                            break;
+                case 0x7E:  transmitCalibToUART();
+														break;
 
                 case 0x02:  Data_Transmission();
                             break;
@@ -249,6 +256,7 @@ void receiveData(void)
                 default:    break;
             }
         //}
+				receptstatus = RECEPTION_DONE;
     }
 }
 
@@ -258,7 +266,7 @@ void systemInitialization(void)
     copyCalibFlashToRam();
 
     //Identify if there are some data recorded
-    if (calibrationBlock.Calibration_RAM.Max_Engine_Speed == 0u)
+    if (calibFlashBlock.Calibration_RAM.Max_Engine_Speed == 0u)
     {
         initializeCalibOnRAM();
     }
@@ -559,6 +567,7 @@ void Statistics(void)
     scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
 
+/*
 uint8_t Data_Reception(uint8_t strg[])
 {
     uint8_t i,j,k;
@@ -589,6 +598,7 @@ uint8_t Data_Reception(uint8_t strg[])
         return(FALSE);
     }
 }
+*/
 
 void Task_Fast(void)
 {
@@ -599,8 +609,9 @@ void Task_Medium(void)
 {
     Set_Ouput_LED();
     Cut_Igntion();
-    Data_Reception(UART3_rxBuffer);
-    Data_Transmission1();
+	  receiveData();
+    //Data_Reception(UART3_rxBuffer);
+    //Data_Transmission1();
     Statistics();
 }
 
@@ -679,7 +690,7 @@ void Set_Pulse_Program(void)
         if((scenario.Engine_Speed<<1u)>scenario.Engine_Speed_old)
         {
             scenario.engineSpeedPred = (scenario.Engine_Speed<<1u)-scenario.Engine_Speed_old;
-            scenario.tdutyInputSignalPredLinear = (RPM_const*calibrationBlock.Calibration_RAM.sensorAngDisplecement)/(scenario.engineSpeedPred*360u);
+            scenario.tdutyInputSignalPredLinear = (RPM_const*calibFlashBlock.Calibration_RAM.sensorAngDisplecement)/(scenario.engineSpeedPred*360u);
         }
         else
         {
@@ -756,7 +767,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));
-    transmstatus = DATA_AVAILABLE_RX_BUFFER;
+    receptstatus = DATA_AVAILABLE_RX_BUFFER;	  
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
