@@ -57,10 +57,8 @@ DMA_HandleTypeDef hdma_usart3_tx;
 #define TPulseInv                   4582u     //3,5ms measured...
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
-#define FALSE                          0u
-#define TRUE                           1u
-#define OFF                            0u
-#define ON                             1u
+#define FALSE, OFF                     0u
+#define TRUE, ON                       1u
 #define EngineSpeedPeriod_Min     785455u     //100rpm
 #define EngineSpeedPeriod_Max       5236u     //15000rpm
 
@@ -82,6 +80,7 @@ Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
 
 typedef struct
 {
+    uint8_t  sensorAngDisplecement;
     uint16_t Max_Engine_Speed;
     uint16_t BP_Engine_Speed[12];
     uint8_t  BP_Timing_Advance[12];
@@ -92,27 +91,27 @@ typedef struct
 
 #define blockSize sizeof (dataCalibration)
 
-typedef union 
+typedef union
 {
-   dataCalibration Calibration_RAM;
-   uint32_t array_Calibration_RAM[blockSize>>2];
-	 uint8_t array_Calibration_RAM_UART[blockSize];
+    dataCalibration Calibration_RAM;
+    uint32_t array_Calibration_RAM[blockSize>>2];   //Divided in 4 (32/4 = 8 byte)
+    uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
 
-static const calibrationBlock Initial_Calibration = {7500,
+static const calibrationBlock Initial_Calibration = { 28, 7500,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
-                                              {1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000, 12000, 15000},
-																							//{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64},90,80,10};
-																							//{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48},90,80,10};
-                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32},90,80,10};
-                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16},90,80,10};
-																							//{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0},90,80,10};
-																							//{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64},90,80,10};
-																							{  64,   58,   48,   38,   25,   15,    0,    0,   40,   45,     55,     64},90,80,10};
-																							//64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+
-																							
-calibrationBlock calibFlashBlock;	
-																							
+                                              { 1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000,12000,15000},
+                                              //{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}, 90, 80, 10};
+                                              //{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48}, 90, 80, 10};
+                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}, 90, 80, 10};
+                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16}, 90, 80, 10};
+                                              //{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0}, 90, 80, 10};
+                                              //{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64}, 90, 80, 10};
+                                              {   64,   58,   48,   38,   25,   15,    0,    0,   40,   45,   55,   64}, 90, 80, 10};
+                                              //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+
+
+calibrationBlock calibFlashBlock;
+
 typedef struct system_info
 {
     uint16_t Engine_Speed_old;
@@ -122,7 +121,7 @@ typedef struct system_info
     uint16_t avarageEngineSpeed;
     int32_t  deltaEngineSpeed;
     uint32_t Rising_Edge_Counter;
-	  uint32_t triggerEventCounter;
+    uint32_t triggerEventCounter;
     uint32_t inversorEventCounter;
     uint32_t Measured_Period;
     uint32_t TDuty_Input_Signal;
@@ -165,10 +164,8 @@ sched_var array_sched_var[3];
 
 //UART Communication
 //uint8_t UART3_txBuffer[12]={0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u};
-uint8_t UART3_txBuffer[37]={'0','6','4','0','6','4','0','6','4','0','6','4',
-                            '0','6','4','0','6','4','0','6','4','0','6','4',
-                            '0','6','4','0','6','4','0','6','4','0','6','4','7'};
-uint8_t UART3_rxBuffer[37];
+uint8_t UART3_txBuffer[blockSize+2];
+uint8_t UART3_rxBuffer[blockSize+2];
 
 /* USER CODE END PV */
 
@@ -180,25 +177,91 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
-														
-void initializeFlashBlock(void)
-{	
-	  uint8_t i;
-	
-	  for(i=0;i<sizeof(dataCalibration);i++)
-	  {
-				calibFlashBlock.array_Calibration_RAM[i] = Initial_Calibration.array_Calibration_RAM[i];			  
-		}			
-}	
+
+void initializeCalibOnRAM(void)
+{
+    uint8_t i;
+
+    for(i=0;i<sizeof(dataCalibration);i++)
+    {
+        calibFlashBlock.array_Calibration_RAM[i] = Initial_Calibration.array_Calibration_RAM[i];
+    }
+}
 
 void saveCalibRamToFlash(void)
-{	
-	  Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
-}	
+{
+    Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+}
 
-void readCalibFlashToRAM(void)
-{	
-		Flash_Read_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+void copyCalibFlashToRam(void)
+{
+    Flash_Read_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+}
+
+void transmitCalibToUART(void)
+{
+    uint16_t i;
+    uint8_t checksum;
+    uint16_t buffer_length;
+
+    buffer_length = sizeof(UART3_txBuffer);
+
+    UART3_txBuffer[0] = 0x7E;
+    checksum = UART3_txBuffer[0];
+
+    for (i=1,i<buffer_length-2,i++)
+    {
+        UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
+        checksum += calibFlashBlock.array_Calibration_RAM[i];
+    }
+
+    UART3_txBuffer[buffer_length-1] = checksum;
+}
+
+void receiveData(void)
+{
+    uint8_t command;
+    uint8_t checksum;
+    uint16_t buffer_length;
+    uint16_t i;
+
+    if(transmstatus == DATA_AVAILABLE_RX_BUFFER)
+    {
+        buffer_length = sizeof(UART3_rxBuffer);
+
+        // for(i=0,i<buffer_length-2,i++)
+        // {
+            // checksum += UART3_rxBuffer[i];
+        // }
+
+        // if(!(UART3_rxBuffer[buffer_length-1]-checksum))
+        // {
+            command = UART3_rxBuffer[0];
+
+            switch(command)
+            {
+                case 0x01:  transmitCalibToUART();
+                            break;
+
+                case 0x02:  Data_Transmission();
+                            break;
+
+                default:    break;
+            }
+        //}
+    }
+}
+
+void systemInitialization(void)
+{
+    //FLASH Memory initialization
+    copyCalibFlashToRam();
+
+    //Identify if there are some data recorded
+    if (calibrationBlock.Calibration_RAM.Max_Engine_Speed == 0u)
+    {
+        initializeCalibOnRAM();
+    }
 }
 
 void Turn_OFF_Int_input(void)
@@ -431,15 +494,25 @@ void Checksum(uint8_t strg[], uint8_t strg_length)
     strg[(strg_length)-1u]=result;
 }
 
-void applyCalibration(uint8_t *buffer)
-{	
-	  uint8_t i;
-	
-	  for(i=0;i<sizeof(dataCalibration);i++)
-	  {
-				calibFlashBlock.array_Calibration_RAM[i] = buffer[i];			  
-		}	
-}	
+void copyCalibUartToRam(void)
+{
+    uint8_t i;
+
+    for(i=0;i<blockSize;i++)
+    {
+        calibFlashBlock.array_Calibration_RAM[i] = UART3_rxBuffer[i];
+    }
+}
+
+void copyCalibRamToUart(void)
+{
+    uint8_t i;
+
+    for(i=0;i<blockSize;i++)
+    {
+        UART3_rxBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
+    }
+}
 
 void Data_Transmission(void)
 {
@@ -483,7 +556,7 @@ void Statistics(void)
 {
     scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 50u);
     scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
-	  scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
+    scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
 
 uint8_t Data_Reception(uint8_t strg[])
@@ -599,33 +672,31 @@ void Set_Pulse_Program(void)
        (scenario.Measured_Period>=EngineSpeedPeriod_Max))
     {
         scenario.Engine_Speed = RPM_const/scenario.Measured_Period;
-				scenario.Engine_Speed_old = scenario.Engine_Speed;
-				scenario.deltaEngineSpeed = scenario.Engine_Speed-scenario.Engine_Speed_old;
+        scenario.Engine_Speed_old = scenario.Engine_Speed;
+        scenario.deltaEngineSpeed = scenario.Engine_Speed-scenario.Engine_Speed_old;
 
-				//Linear prediction
-				if((scenario.Engine_Speed<<1)>scenario.Engine_Speed_old)
-				{
-					scenario.engineSpeedPred = (scenario.Engine_Speed<<1)-scenario.Engine_Speed_old;
-					//Improvements: define these engine speed or calculate based on period already existent
-					//change 28 for learned value			
-					scenario.tdutyInputSignalPredLinear = (RPM_const*28u)/(scenario.engineSpeedPred*360u);        
-				}
-				else
-				{
-					scenario.engineSpeedPred = 0u;
-				}				
-				
-				//For calculus purpose I decided to use the linear prediction
-				scenario.Engine_Speed = scenario.engineSpeedPred;
+        //Linear prediction
+        if((scenario.Engine_Speed<<1u)>scenario.Engine_Speed_old)
+        {
+            scenario.engineSpeedPred = (scenario.Engine_Speed<<1u)-scenario.Engine_Speed_old;
+            scenario.tdutyInputSignalPredLinear = (RPM_const*calibrationBlock.Calibration_RAM.sensorAngDisplecement)/(scenario.engineSpeedPred*360u);
+        }
+        else
+        {
+            scenario.engineSpeedPred = 0u;
+        }
+
+        //For calculus purpose I decided to use the linear prediction
+        scenario.Engine_Speed = scenario.engineSpeedPred;
 
         if(scenario.Engine_Speed>=calibFlashBlock.Calibration_RAM.BP_Engine_Speed[0])
         {
             request.engSpeed = HIGH;
             scenario.TDuty_Input_Signal += scenario.nOverflow_FE*TMR2_16bits;
             scenario.tdutyInputSignalPred = predictionCalc(scenario.TDuty_Input_Signal);
-					  //scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
+            //scenario.TStep = scenario.TDuty_Input_Signal/nSteps;
             scenario.TStep = scenario.tdutyInputSignalPredLinear/nSteps;
-            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);            
+            scenario.nAdv = Ignition_nTime(scenario.Engine_Speed);
             Event1 = scenario.TStep*scenario.nAdv;
         }
         else
@@ -650,7 +721,7 @@ void Set_Pulse_Program(void)
         //Event 3 - Generates Rising Edge for inversor signal using TMR4 to generate the event
         request.timerCtrl[2].counter = Event3%65536u;
 
-        //Event 4 - Generates Falling Edge for inversor signal using TMR2 to generate the event
+        //Event 4 - Generates Falling Edge for inversor signal using TMR4 to generate the event
         request.timerCtrl[3].counter = Event4%65536u;
     }
     else if(scenario.Measured_Period<EngineSpeedPeriod_Max)
@@ -668,7 +739,7 @@ void Set_Pulse_Program(void)
     Pulse_Program.timerCtrl[1].timer_program = EMPTY;
     Pulse_Program.timerCtrl[2].timer_program = EMPTY;
     Pulse_Program.timerCtrl[3].timer_program = EMPTY;
-		
+
     Set_Ouput_InterruptionTest();
 }
 
@@ -704,7 +775,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  readCalibFlashToRAM();
+  systemInitialization();
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -796,7 +867,7 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -809,7 +880,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -994,10 +1065,10 @@ static void MX_USART3_UART_Init(void)
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
@@ -1032,15 +1103,15 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4 
-                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8 
-                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
+                          |GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
                           |GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12 
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
                           |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
@@ -1056,11 +1127,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA3 PA4 PA5 
-                           PA7 PA8 PA9 PA10 
+  /*Configure GPIO pins : PA1 PA3 PA4 PA5
+                           PA7 PA8 PA9 PA10
                            PA11 PA12 PA15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10 
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1081,11 +1152,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB12 PB13 PB14 
-                           PB15 PB3 PB4 PB5 
+  /*Configure GPIO pins : PB2 PB12 PB13 PB14
+                           PB15 PB3 PB4 PB5
                            PB6 PB7 PB8 PB9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
                           |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -1098,7 +1169,7 @@ static void MX_GPIO_Init(void)
 
 void Pulse_Generator_Scheduler(void)
 {
-    uint8_t i;    
+    uint8_t i;
 
     for(i=0;i<4;i++)
     {
@@ -1128,12 +1199,12 @@ void Pulse_Generator_Scheduler(void)
 }
 
 void TurnOffAllPulseInt(void)
-{	
-		HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
+{
+    HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_1);
     HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_2);
     HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_3);
     HAL_TIM_OC_Stop_IT(&htim4,TIM_CHANNEL_4);
-}	
+}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -1150,9 +1221,9 @@ void Rising_Edge_Event(void)
     __HAL_TIM_SET_COUNTER(&htim2,0u);
     scenario.nOverflow = 0u;
     Pulse_Program.engSpeed = request.engSpeed;
-	
+
     if((Pulse_Program.engSpeed == HIGH)&&
-			 (scenario.Cutoff_IGN == OFF))
+    (scenario.Cutoff_IGN == OFF))
     {
         Pulse_Generator_Scheduler();
     }
@@ -1166,7 +1237,7 @@ void Falling_Edge_Event(void)
     scenario.nOverflow_FE = scenario.nOverflow;
 
     if((Pulse_Program.engSpeed == LOW)&&
-			 (scenario.Cutoff_IGN == OFF))
+    (scenario.Cutoff_IGN == OFF))
     {
         Pulse_Generator_Scheduler();
     }
@@ -1198,7 +1269,7 @@ void Treat_Int(uint8_t program)
     {
         case INT_FROM_CH1: Set_Ouput_Trigger(ON);
                            Pulse_Program.timerCtrl[0].timer_program = EMPTY;
-			                     scenario.triggerEventCounter++;
+                           scenario.triggerEventCounter++;
                            break;
 
         case INT_FROM_CH2: Set_Ouput_Trigger(OFF);
@@ -1207,12 +1278,12 @@ void Treat_Int(uint8_t program)
 
         case INT_FROM_CH3: Set_Ouput_Inversor(ON);
                            Pulse_Program.timerCtrl[2].timer_program = EMPTY;
-			                     scenario.inversorEventCounter++;
+                           scenario.inversorEventCounter++;
                            break;
 
         case INT_FROM_CH4: Set_Ouput_Inversor(OFF);
                            Pulse_Program.timerCtrl[3].timer_program = EMPTY;
-			                     TurnOffAllPulseInt();   			
+                           TurnOffAllPulseInt();
                            break;
 
         default          : break;
@@ -1269,7 +1340,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
