@@ -49,20 +49,18 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 /* USER CODE BEGIN PV */
-//Sw defines
 #define nSteps                        64u
-#define TDuty_Trigger_const         1309u     //1.0ms for clock 72MHz
-#define TDutyTriggerK               1319u     //10 + 1319
-#define TIntervPulseInv              655u     //1964u     //1.0ms + 0.5ms
-#define TPulseInv                   4582u     //3,5ms measured...
+#define TDutyTriggerK               1309u     //1.0ms for clock 72MHz
+#define TIntervPulseInv              655u     //0.5ms
+#define TPulseInv                   4582u     //3,5ms
+#define EngineSpeedPeriod_Min     785455u     //100rpm
+#define EngineSpeedPeriod_Max       5236u     //15000rpm
 #define TMR2_16bits                65536u
 #define RPM_const               78545455u
 #define FALSE                          0u
 #define TRUE                           1u
 #define OFF                            0u
 #define ON                             1u
-#define EngineSpeedPeriod_Min     785455u     //100rpm
-#define EngineSpeedPeriod_Max       5236u     //15000rpm
 
 //Global variable
 enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
@@ -71,6 +69,8 @@ enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION,
 enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE} transmstatus;
 enum Reception_Status {DATA_AVAILABLE_RX_BUFFER, RECEPTION_DONE} receptstatus;
 enum engineSpeed {LOW, HIGH} pulseMngmt;
+
+uint8_t flgTransmition = OFF;
 
 /*
 2 different speed
@@ -130,7 +130,7 @@ typedef struct system_info
     uint32_t TDuty_Input_Signal;
     uint32_t tdutyInputSignalPred;
     uint32_t tdutyInputSignalPredLinear;
-    uint8_t  sensorWindow;
+    uint8_t  sensorAngDisplecementMeasured;
     uint32_t TStep;
     uint8_t  nAdv;
     uint8_t  Cutoff_IGN;
@@ -166,10 +166,9 @@ typedef struct Scheduler
 sched_var array_sched_var[3];
 
 //UART Communication
-//uint8_t UART3_txBuffer[12]={0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u,0u};
 uint8_t UART3_txBuffer[blockSize+2];
 uint8_t UART3_rxBuffer[blockSize+2];
-
+uint8_t UART3_rxBufferAlt[11];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,20 +206,24 @@ void transmitCalibToUART(void)
     uint8_t checksum;
     uint16_t buffer_length;
 
-    buffer_length = sizeof(UART3_txBuffer);
-
-    UART3_txBuffer[0] = 0x7E;
-    checksum = UART3_txBuffer[0];
-
-    for (i=1;i<buffer_length-2;i++)
+    if(transmstatus == TRANSMISSION_DONE)
     {
-        UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
-        checksum += UART3_txBuffer[i];
-    }
 
-    UART3_txBuffer[buffer_length-1] = checksum;
-		transmstatus = TRANSMITING;
-    HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
+        buffer_length = sizeof(UART3_txBuffer);
+
+        UART3_txBuffer[0] = 0x7E;
+        checksum = UART3_txBuffer[0];
+
+        for (i=1;i<buffer_length-2;i++)
+        {
+            UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
+            checksum += UART3_txBuffer[i];
+        }
+
+        UART3_txBuffer[buffer_length-1] = checksum;
+        transmstatus = TRANSMITING;
+        HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
+    }
 }
 
 void Data_Transmission(void);
@@ -236,27 +239,31 @@ void receiveData(void)
     {
         buffer_length = sizeof(UART3_rxBuffer);
 
-        // for(i=0,i<buffer_length-2,i++)
-        // {
-            // checksum += UART3_rxBuffer[i];
-        // }
+        for(i=0,i<buffer_length-2,i++)
+        {
+            checksum += UART3_rxBuffer[i];
+        }
 
-        // if(!(UART3_rxBuffer[buffer_length-1]-checksum))
-        // {
+        if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)
+        {
             command = UART3_rxBuffer[0];
 
             switch(command)
             {
                 case 0x7E:  transmitCalibToUART();
-														break;
+                            break;
 
-                case 0x02:  Data_Transmission();
+                case 0x02:  flgTransmition = ON;
+                            break;
+
+                case 0x03:  flgTransmition = OFF;
                             break;
 
                 default:    break;
             }
-        //}
-				receptstatus = RECEPTION_DONE;
+        }
+
+        receptstatus = RECEPTION_DONE;
     }
 }
 
@@ -270,6 +277,10 @@ void systemInitialization(void)
     {
         initializeCalibOnRAM();
     }
+
+    //Communication
+    transmstatus = TRANSMISSION_DONE;
+    receptstatus = RECEPTION_DONE;
 }
 
 void Turn_OFF_Int_input(void)
@@ -494,12 +505,52 @@ void Checksum(uint8_t strg[], uint8_t strg_length)
 {
     uint8_t i,result;
 
-    for(i=0u;i<(strg_length)-1u;i++)
+    for(i=0u;i<(strg_length)-2u;i++)
     {
         result+=strg[i];
     }
 
     strg[(strg_length)-1u]=result;
+}
+
+void transmitSystemInfo(uint8_t *resp[])
+{
+    uint8_t Mil, Cent, Dez, Unid;
+    uint16_t Man, num;
+
+    num = scenario.Engine_Speed;
+    num1 = scenario.nAdv;
+
+    if((num<=9999u)&&(num1<=999u))
+    {
+        Mil = (num/1000u)+0x30;
+        Man = num%1000u;
+        Cent = (Man/100u)+0x30;
+        Man = Man%100u;
+        Dez = (Man/10u)+0x30;
+        Unid = (Man%10u)+0x30;
+
+        resp[0]='R';
+        resp[1]=Mil;
+        resp[2]=Cent;
+        resp[3]=Dez;
+        resp[4]=Unid;
+        resp[5]='A'
+
+        Cent = (num1/100u)+0x30;
+        Man = num1%100u;
+        Dez = (Man/10u)+0x30;
+        Unid = (Man%10u)+0x30;
+
+        resp[6]=Cent;
+        resp[7]=Dez;
+        resp[8]=Unid;
+        resp[9]=0x0A; // '\n' - Line feed
+
+        Checksum(resp, sizeof(resp));
+
+        transmstatus = TRANSMITING;
+        HAL_UART_Transmit_DMA(&huart3, resp, sizeof(resp));
 }
 
 void copyCalibUartToRam(void)
@@ -564,7 +615,7 @@ void Statistics(void)
 {
     scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 50u);
     scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
-    scenario.sensorWindow = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
+    scenario.sensorAngDisplecementMeasured = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
 
 /*
@@ -609,9 +660,13 @@ void Task_Medium(void)
 {
     Set_Ouput_LED();
     Cut_Igntion();
-	  receiveData();
-    //Data_Reception(UART3_rxBuffer);
-    //Data_Transmission1();
+    receiveData();
+
+    if(flgTransmition)
+    {
+        transmitSystemInfo(&UART3_rxBufferAlt);
+    }
+
     Statistics();
 }
 
@@ -719,7 +774,7 @@ void Set_Pulse_Program(void)
             Event1 = 0u;
         }
 
-        Event2 = Event1+TDuty_Trigger_const;
+        Event2 = Event1+TDutyTriggerK;
         Event3 = Event2+TIntervPulseInv;
         Event4 = Event3+TPulseInv;
 
@@ -767,7 +822,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));
-    receptstatus = DATA_AVAILABLE_RX_BUFFER;	  
+    receptstatus = DATA_AVAILABLE_RX_BUFFER;
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
