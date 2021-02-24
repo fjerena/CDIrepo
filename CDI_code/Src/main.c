@@ -97,7 +97,7 @@ typedef union
 {
     dataCalibration Calibration_RAM;
     //uint32_t array_Calibration_RAM[(blockSize>>2)+1];   //Divided in 4 (32/4 = 8 byte)
-	  uint32_t array_Calibration_RAM[10];
+	  uint32_t array_Calibration_RAM[11];
     uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
 
@@ -115,7 +115,11 @@ static const calibrationBlock Initial_Calibration = { 28, 7500,
 
 calibrationBlock calibFlashBlock;
 																							
-uint32_t buceta[3] = {0xFAB10123, 0xFAB10123, 0xFAB10123};
+uint32_t buceta[] = {0xFAB10123, 0xFAB10123, 0xFAB10123,
+                     0xFAB10123, 0xFAB10123, 0xFAB10123,
+                     0xFAB10123, 0xFAB10123, 0xFAB10123,
+                     //0xFAB10123, 0x69696969, 0x69696969};
+                     0xFAB10123, 0x69696969};
 
 typedef struct system_info
 {
@@ -866,7 +870,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  systemInitialization();
+  
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -875,7 +879,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	systemInitialization();
   /* USER CODE END Init */
 
   /* Configure the system clock */

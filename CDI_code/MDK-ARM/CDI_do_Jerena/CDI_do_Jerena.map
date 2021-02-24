@@ -126,8 +126,8 @@ Section Cross References
     main.o(i.initializeCalibOnRAM) refers to main.o(.constdata) for Initial_Calibration
     main.o(i.initializeCalibOnRAM) refers to main.o(.bss) for calibFlashBlock
     main.o(i.linearInterpolation) refers to main.o(i.binarySearch) for binarySearch
-    main.o(i.main) refers to main.o(i.systemInitialization) for systemInitialization
     main.o(i.main) refers to stm32f1xx_hal.o(i.HAL_Init) for HAL_Init
+    main.o(i.main) refers to main.o(i.systemInitialization) for systemInitialization
     main.o(i.main) refers to main.o(i.SystemClock_Config) for SystemClock_Config
     main.o(i.main) refers to main.o(i.MX_GPIO_Init) for MX_GPIO_Init
     main.o(i.main) refers to main.o(i.MX_DMA_Init) for MX_DMA_Init
@@ -1187,30 +1187,30 @@ Image Symbol Table
     .constdata                               0x080039e0   Section       44  main.o(.constdata)
     Initial_Calibration                      0x080039e0   Data          44  main.o(.constdata)
     .constdata                               0x08003a0c   Section       24  system_stm32f1xx.o(.constdata)
-    .data                                    0x20000000   Section       77  main.o(.data)
-    program                                  0x20000014   Data           1  main.o(.data)
-    initial_value                            0x20000018   Data           4  main.o(.data)
-    varOld                                   0x2000001c   Data           1  main.o(.data)
-    varOld                                   0x2000001e   Data           2  main.o(.data)
-    errt                                     0x20000020   Data           4  main.o(.data)
-    dts                                      0x20000024   Data           4  main.o(.data)
-    dtpred                                   0x20000028   Data           4  main.o(.data)
-    tddts                                    0x2000002c   Data           4  main.o(.data)
-    tddtpred                                 0x20000030   Data           4  main.o(.data)
-    t2dddts                                  0x20000034   Data           4  main.o(.data)
-    advance                                  0x20000038   Data           1  main.o(.data)
-    Event1                                   0x2000003c   Data           4  main.o(.data)
-    Event2                                   0x20000040   Data           4  main.o(.data)
-    Event3                                   0x20000044   Data           4  main.o(.data)
-    Event4                                   0x20000048   Data           4  main.o(.data)
-    k                                        0x2000004c   Data           1  main.o(.data)
-    .data                                    0x20000050   Section        9  stm32f1xx_hal.o(.data)
-    .data                                    0x2000005c   Section        4  system_stm32f1xx.o(.data)
-    .bss                                     0x20000060   Section      635  main.o(.bss)
-    .bss                                     0x200002dc   Section       16  flash_page.o(.bss)
-    EraseInitStruct                          0x200002dc   Data          16  flash_page.o(.bss)
-    .bss                                     0x200002f0   Section       32  stm32f1xx_hal_flash.o(.bss)
-    STACK                                    0x20000310   Section     1024  startup_stm32f103xb.o(STACK)
+    .data                                    0x20000000   Section      109  main.o(.data)
+    program                                  0x20000034   Data           1  main.o(.data)
+    initial_value                            0x20000038   Data           4  main.o(.data)
+    varOld                                   0x2000003c   Data           1  main.o(.data)
+    varOld                                   0x2000003e   Data           2  main.o(.data)
+    errt                                     0x20000040   Data           4  main.o(.data)
+    dts                                      0x20000044   Data           4  main.o(.data)
+    dtpred                                   0x20000048   Data           4  main.o(.data)
+    tddts                                    0x2000004c   Data           4  main.o(.data)
+    tddtpred                                 0x20000050   Data           4  main.o(.data)
+    t2dddts                                  0x20000054   Data           4  main.o(.data)
+    advance                                  0x20000058   Data           1  main.o(.data)
+    Event1                                   0x2000005c   Data           4  main.o(.data)
+    Event2                                   0x20000060   Data           4  main.o(.data)
+    Event3                                   0x20000064   Data           4  main.o(.data)
+    Event4                                   0x20000068   Data           4  main.o(.data)
+    k                                        0x2000006c   Data           1  main.o(.data)
+    .data                                    0x20000070   Section        9  stm32f1xx_hal.o(.data)
+    .data                                    0x2000007c   Section        4  system_stm32f1xx.o(.data)
+    .bss                                     0x20000080   Section      635  main.o(.bss)
+    .bss                                     0x200002fc   Section       16  flash_page.o(.bss)
+    EraseInitStruct                          0x200002fc   Data          16  flash_page.o(.bss)
+    .bss                                     0x20000310   Section       32  stm32f1xx_hal_flash.o(.bss)
+    STACK                                    0x20000330   Section     1024  startup_stm32f103xb.o(STACK)
 
     Global Symbols
 
@@ -1420,26 +1420,26 @@ Image Symbol Table
     receptstatus                             0x20000004   Data           1  main.o(.data)
     pulseMngmt                               0x20000005   Data           1  main.o(.data)
     flgTransmition                           0x20000006   Data           1  main.o(.data)
-    buceta                                   0x20000008   Data          12  main.o(.data)
-    uwTick                                   0x20000050   Data           4  stm32f1xx_hal.o(.data)
-    uwTickPrio                               0x20000054   Data           4  stm32f1xx_hal.o(.data)
-    uwTickFreq                               0x20000058   Data           1  stm32f1xx_hal.o(.data)
-    SystemCoreClock                          0x2000005c   Data           4  system_stm32f1xx.o(.data)
-    htim2                                    0x20000060   Data          64  main.o(.bss)
-    htim4                                    0x200000a0   Data          64  main.o(.bss)
-    huart3                                   0x200000e0   Data          64  main.o(.bss)
-    hdma_usart3_rx                           0x20000120   Data          68  main.o(.bss)
-    hdma_usart3_tx                           0x20000164   Data          68  main.o(.bss)
-    calibFlashBlock                          0x200001a8   Data          44  main.o(.bss)
-    scenario                                 0x200001d4   Data          64  main.o(.bss)
-    request                                  0x20000214   Data          36  main.o(.bss)
-    Pulse_Program                            0x20000238   Data          36  main.o(.bss)
-    array_sched_var                          0x2000025c   Data          24  main.o(.bss)
-    UART3_txBuffer                           0x20000274   Data          46  main.o(.bss)
-    UART3_rxBuffer                           0x200002a2   Data          46  main.o(.bss)
-    UART3_rxBufferAlt                        0x200002d0   Data          11  main.o(.bss)
-    pFlash                                   0x200002f0   Data          32  stm32f1xx_hal_flash.o(.bss)
-    __initial_sp                             0x20000710   Data           0  startup_stm32f103xb.o(STACK)
+    buceta                                   0x20000008   Data          44  main.o(.data)
+    uwTick                                   0x20000070   Data           4  stm32f1xx_hal.o(.data)
+    uwTickPrio                               0x20000074   Data           4  stm32f1xx_hal.o(.data)
+    uwTickFreq                               0x20000078   Data           1  stm32f1xx_hal.o(.data)
+    SystemCoreClock                          0x2000007c   Data           4  system_stm32f1xx.o(.data)
+    htim2                                    0x20000080   Data          64  main.o(.bss)
+    htim4                                    0x200000c0   Data          64  main.o(.bss)
+    huart3                                   0x20000100   Data          64  main.o(.bss)
+    hdma_usart3_rx                           0x20000140   Data          68  main.o(.bss)
+    hdma_usart3_tx                           0x20000184   Data          68  main.o(.bss)
+    calibFlashBlock                          0x200001c8   Data          44  main.o(.bss)
+    scenario                                 0x200001f4   Data          64  main.o(.bss)
+    request                                  0x20000234   Data          36  main.o(.bss)
+    Pulse_Program                            0x20000258   Data          36  main.o(.bss)
+    array_sched_var                          0x2000027c   Data          24  main.o(.bss)
+    UART3_txBuffer                           0x20000294   Data          46  main.o(.bss)
+    UART3_rxBuffer                           0x200002c2   Data          46  main.o(.bss)
+    UART3_rxBufferAlt                        0x200002f0   Data          11  main.o(.bss)
+    pFlash                                   0x20000310   Data          32  stm32f1xx_hal_flash.o(.bss)
+    __initial_sp                             0x20000730   Data           0  startup_stm32f103xb.o(STACK)
 
 
 
@@ -1449,7 +1449,7 @@ Memory Map of the image
 
   Image Entry point : 0x080000ed
 
-  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00003aa4, Max: 0x00010000, ABSOLUTE)
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00003ac4, Max: 0x00010000, ABSOLUTE)
 
     Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00003a44, Max: 0x00010000, ABSOLUTE)
 
@@ -1656,21 +1656,21 @@ Memory Map of the image
     0x08003a24   0x08003a24   0x00000020   Data   RO         3042    Region$$Table       anon$$obj.o
 
 
-    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08003a44, Size: 0x00000710, Max: 0x00005000, ABSOLUTE)
+    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08003a44, Size: 0x00000730, Max: 0x00005000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x08003a44   0x0000004d   Data   RW           70    .data               main.o
-    0x2000004d   0x08003a91   0x00000003   PAD
-    0x20000050   0x08003a94   0x00000009   Data   RW         1671    .data               stm32f1xx_hal.o
-    0x20000059   0x08003a9d   0x00000003   PAD
-    0x2000005c   0x08003aa0   0x00000004   Data   RW         2986    .data               system_stm32f1xx.o
-    0x20000060        -       0x0000027b   Zero   RW           68    .bss                main.o
-    0x200002db   0x08003aa4   0x00000001   PAD
-    0x200002dc        -       0x00000010   Zero   RW          626    .bss                flash_page.o
-    0x200002ec   0x08003aa4   0x00000004   PAD
-    0x200002f0        -       0x00000020   Zero   RW         2385    .bss                stm32f1xx_hal_flash.o
-    0x20000310        -       0x00000400   Zero   RW            1    STACK               startup_stm32f103xb.o
+    0x20000000   0x08003a44   0x0000006d   Data   RW           70    .data               main.o
+    0x2000006d   0x08003ab1   0x00000003   PAD
+    0x20000070   0x08003ab4   0x00000009   Data   RW         1671    .data               stm32f1xx_hal.o
+    0x20000079   0x08003abd   0x00000003   PAD
+    0x2000007c   0x08003ac0   0x00000004   Data   RW         2986    .data               system_stm32f1xx.o
+    0x20000080        -       0x0000027b   Zero   RW           68    .bss                main.o
+    0x200002fb   0x08003ac4   0x00000001   PAD
+    0x200002fc        -       0x00000010   Zero   RW          626    .bss                flash_page.o
+    0x2000030c   0x08003ac4   0x00000004   PAD
+    0x20000310        -       0x00000020   Zero   RW         2385    .bss                stm32f1xx_hal_flash.o
+    0x20000330        -       0x00000400   Zero   RW            1    STACK               startup_stm32f103xb.o
 
 
 ==============================================================================
@@ -1681,7 +1681,7 @@ Image component sizes
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   Object Name
 
        208          6          0          0         16       1923   flash_page.o
-      3630        386         44         77        635     455943   main.o
+      3630        386         44        109        635     455943   main.o
         36          8        236          0       1024        820   startup_stm32f103xb.o
        152         32          0          9          0       5397   stm32f1xx_hal.o
        304         22          0          0          0      29543   stm32f1xx_hal_cortex.o
@@ -1699,7 +1699,7 @@ Image component sizes
         88         18         24          4          0       1211   system_stm32f1xx.o
 
     ----------------------------------------------------------------------
-     14410        892        336         96       1712     565566   Object Totals
+     14410        892        336        128       1712     565566   Object Totals
          0          0         32          0          0          0   (incl. Generated)
         40          0          0          6          5          0   (incl. Padding)
 
@@ -1741,15 +1741,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-     14580        908        336         96       1712     558074   Grand Totals
-     14580        908        336         96       1712     558074   ELF Image Totals
-     14580        908        336         96          0          0   ROM Totals
+     14580        908        336        128       1712     558074   Grand Totals
+     14580        908        336        128       1712     558074   ELF Image Totals
+     14580        908        336        128          0          0   ROM Totals
 
 ==============================================================================
 
     Total RO  Size (Code + RO Data)                14916 (  14.57kB)
-    Total RW  Size (RW Data + ZI Data)              1808 (   1.77kB)
-    Total ROM Size (Code + RO Data + RW Data)      15012 (  14.66kB)
+    Total RW  Size (RW Data + ZI Data)              1840 (   1.80kB)
+    Total ROM Size (Code + RO Data + RW Data)      15044 (  14.69kB)
 
 ==============================================================================
 
