@@ -80,7 +80,6 @@ High >= First breakpoint(with restriction %)  // according igntion map
 Engine Speed: Stopped, Acceleration, Steady State, Decelerate
 Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
 */
-
 typedef struct
 {
     uint8_t  sensorAngDisplecement;
@@ -97,7 +96,8 @@ typedef struct
 typedef union
 {
     dataCalibration Calibration_RAM;
-    uint32_t array_Calibration_RAM[blockSize>>2];   //Divided in 4 (32/4 = 8 byte)
+    //uint32_t array_Calibration_RAM[(blockSize>>2)+1];   //Divided in 4 (32/4 = 8 byte)
+	  uint32_t array_Calibration_RAM[10];
     uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
 
@@ -114,6 +114,8 @@ static const calibrationBlock Initial_Calibration = { 28, 7500,
                                               //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+
 
 calibrationBlock calibFlashBlock;
+																							
+uint32_t buceta[3] = {0xFAB10123, 0xFAB10123, 0xFAB10123};
 
 typedef struct system_info
 {
@@ -190,9 +192,21 @@ void initializeCalibOnRAM(void)
     }
 }
 
+void copyCalibUARTtoRAM(void)	
+{
+    uint8_t i;
+
+    for(i=0;i<sizeof(dataCalibration);i++)
+    {
+        calibFlashBlock.array_Calibration_RAM_UART[i] = UART3_rxBuffer[i+1];
+    }
+}
+
 void saveCalibRamToFlash(void)
 {
     Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+	  //Flash_Write_Data (0x0801FC00, buceta);
+	
 }
 
 void copyCalibFlashToRam(void)
@@ -208,7 +222,6 @@ void transmitCalibToUART(void)
 
     if(transmstatus == TRANSMISSION_DONE)
     {
-
         buffer_length = sizeof(UART3_txBuffer);
 
         UART3_txBuffer[0] = 0x7E;
@@ -227,6 +240,7 @@ void transmitCalibToUART(void)
 }
 
 void Data_Transmission(void);
+//void copyCalibUARTtoRAM(void);
 
 void receiveData(void)
 {
@@ -239,12 +253,13 @@ void receiveData(void)
     {
         buffer_length = sizeof(UART3_rxBuffer);
 
-        for(i=0,i<buffer_length-2,i++)
+        for(i=0;i<buffer_length-1;i++)
         {
             checksum += UART3_rxBuffer[i];
         }
 
         if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)
+				//if(1)
         {
             command = UART3_rxBuffer[0];
 
@@ -252,6 +267,12 @@ void receiveData(void)
             {
                 case 0x7E:  transmitCalibToUART();
                             break;
+							
+							  case 0x69:  copyCalibUARTtoRAM();
+                            break;
+							
+								case 0x47:  saveCalibRamToFlash();
+							              break;
 
                 case 0x02:  flgTransmition = ON;
                             break;
@@ -269,15 +290,18 @@ void receiveData(void)
 
 void systemInitialization(void)
 {
-    //FLASH Memory initialization
-    copyCalibFlashToRam();
-
+	/*
+	  copyCalibFlashToRam();
+	
     //Identify if there are some data recorded
     if (calibFlashBlock.Calibration_RAM.Max_Engine_Speed == 0u)
     {
-        initializeCalibOnRAM();
+				initializeCalibOnRAM();        
     }
-
+*/
+	  initializeCalibOnRAM(); 
+	  saveCalibRamToFlash();
+	
     //Communication
     transmstatus = TRANSMISSION_DONE;
     receptstatus = RECEPTION_DONE;
@@ -513,10 +537,10 @@ void Checksum(uint8_t strg[], uint8_t strg_length)
     strg[(strg_length)-1u]=result;
 }
 
-void transmitSystemInfo(uint8_t *resp[])
+void transmitSystemInfo(uint8_t resp[])
 {
     uint8_t Mil, Cent, Dez, Unid;
-    uint16_t Man, num;
+    uint16_t Man, num, num1;
 
     num = scenario.Engine_Speed;
     num1 = scenario.nAdv;
@@ -535,7 +559,7 @@ void transmitSystemInfo(uint8_t *resp[])
         resp[2]=Cent;
         resp[3]=Dez;
         resp[4]=Unid;
-        resp[5]='A'
+        resp[5]='A';
 
         Cent = (num1/100u)+0x30;
         Man = num1%100u;
@@ -551,6 +575,7 @@ void transmitSystemInfo(uint8_t *resp[])
 
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart3, resp, sizeof(resp));
+		}		
 }
 
 void copyCalibUartToRam(void)
@@ -664,7 +689,7 @@ void Task_Medium(void)
 
     if(flgTransmition)
     {
-        transmitSystemInfo(&UART3_rxBufferAlt);
+        transmitSystemInfo(UART3_rxBufferAlt);
     }
 
     Statistics();
