@@ -11,7 +11,7 @@
 #include "stm32f1xx_hal.h"
 
 
-uint32_t Flash_Write_Data (uint32_t StartPageAddress, uint32_t * DATA_32);
+uint32_t Flash_Write_Data (uint32_t StartPageAddress, uint32_t * DATA_32, uint32_t dataSize);
 void Flash_Read_Data (uint32_t StartPageAddress, __IO uint32_t * DATA_32);
 void Convert_To_Str (uint32_t *data, char *str);
 

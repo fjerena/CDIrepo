@@ -93,13 +93,14 @@ typedef struct
 
 #define blockSize sizeof (dataCalibration)
 
-typedef union
+typedef union 
 {
     dataCalibration Calibration_RAM;
-    //uint32_t array_Calibration_RAM[(blockSize>>2)+1];   //Divided in 4 (32/4 = 8 byte)
-	  uint32_t array_Calibration_RAM[11];
+    uint32_t array_Calibration_RAM[(blockSize>>2)+1];   //Divided in 4 (32/4 = 8 byte)	  
     uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
+
+calibrationBlock calibFlashBlock;
 
 static const calibrationBlock Initial_Calibration = { 28, 7500,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
@@ -111,15 +112,7 @@ static const calibrationBlock Initial_Calibration = { 28, 7500,
                                               //{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0}, 90, 80, 10};
                                               //{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64}, 90, 80, 10};
                                               {   64,   58,   48,   38,   25,   15,    0,    0,   40,   45,   55,   64}, 90, 80, 10};
-                                              //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+
-
-calibrationBlock calibFlashBlock;
-																							
-uint32_t buceta[] = {0xFAB10123, 0xFAB10123, 0xFAB10123,
-                     0xFAB10123, 0xFAB10123, 0xFAB10123,
-                     0xFAB10123, 0xFAB10123, 0xFAB10123,
-                     //0xFAB10123, 0x69696969, 0x69696969};
-                     0xFAB10123, 0x69696969};
+                                              //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+								
 
 typedef struct system_info
 {
@@ -192,7 +185,7 @@ void initializeCalibOnRAM(void)
 
     for(i=0;i<sizeof(dataCalibration);i++)
     {
-        calibFlashBlock.array_Calibration_RAM[i] = Initial_Calibration.array_Calibration_RAM[i];
+			  calibFlashBlock.array_Calibration_RAM_UART[i] = Initial_Calibration.array_Calibration_RAM_UART[i];
     }
 }
 
@@ -208,9 +201,7 @@ void copyCalibUARTtoRAM(void)
 
 void saveCalibRamToFlash(void)
 {
-    Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
-	  //Flash_Write_Data (0x0801FC00, buceta);
-	
+	  Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);	  	
 }
 
 void copyCalibFlashToRam(void)
@@ -262,17 +253,16 @@ void receiveData(void)
             checksum += UART3_rxBuffer[i];
         }
 
-        if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)
-				//if(1)
+        if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)				
         {
             command = UART3_rxBuffer[0];
 
             switch(command)
             {
-                case 0x7E:  transmitCalibToUART();
+                case 0x69:  transmitCalibToUART();
                             break;
 							
-							  case 0x69:  copyCalibUARTtoRAM();
+							  case 0x7E:  copyCalibUARTtoRAM();
                             break;
 							
 								case 0x47:  saveCalibRamToFlash();
@@ -294,7 +284,7 @@ void receiveData(void)
 
 void systemInitialization(void)
 {
-	/*
+	
 	  copyCalibFlashToRam();
 	
     //Identify if there are some data recorded
@@ -302,9 +292,6 @@ void systemInitialization(void)
     {
 				initializeCalibOnRAM();        
     }
-*/
-	  initializeCalibOnRAM(); 
-	  saveCalibRamToFlash();
 	
     //Communication
     transmstatus = TRANSMISSION_DONE;
