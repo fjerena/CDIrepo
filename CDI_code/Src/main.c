@@ -189,13 +189,23 @@ void initializeCalibOnRAM(void)
     }
 }
 
-void copyCalibUARTtoRAM(void)	
+void copyCalibUartToRam(void)	
 {
     uint32_t i;
 
     for(i=0;i<sizeof(dataCalibration);i++)
     {
         calibFlashBlock.array_Calibration_RAM_UART[i] = UART3_rxBuffer[i+1];
+    }
+}
+
+void copyCalibRamToUart(void)
+{
+    uint8_t i;
+
+    for(i=0;i<blockSize;i++)
+    {
+        UART3_rxBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
     }
 }
 
@@ -234,8 +244,6 @@ void transmitCalibToUART(void)
     }
 }
 
-void Data_Transmission(void);
-
 void receiveData(void)
 {
     uint8_t command;
@@ -270,7 +278,7 @@ void receiveData(void)
                 case 0x69:  transmitCalibToUART();
                             break;
 							
-							  case 0x7E:  copyCalibUARTtoRAM();
+							  case 0x7E:  copyCalibUartToRam();
                             break;              
 
                 default:    break;
@@ -512,26 +520,6 @@ void transmitSystemInfo(void)
 		}		
 }
 
-void copyCalibUartToRam(void)
-{
-    uint8_t i;
-
-    for(i=0;i<blockSize;i++)
-    {
-        calibFlashBlock.array_Calibration_RAM[i] = UART3_rxBuffer[i];
-    }
-}
-
-void copyCalibRamToUart(void)
-{
-    uint8_t i;
-
-    for(i=0;i<blockSize;i++)
-    {
-        UART3_rxBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
-    }
-}
-
 uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
 {
     static uint8_t varOld = 0u;
@@ -560,39 +548,6 @@ void Statistics(void)
     scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
     scenario.sensorAngDisplecementMeasured = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
 }
-
-/*
-uint8_t Data_Reception(uint8_t strg[])
-{
-    uint8_t i,j,k;
-    uint8_t sum, checksum;
-
-    k=0u;
-    checksum=strg[36];
-
-    for(i=0;i<strg[35];i++)
-    {
-        sum+=strg[i];
-    }
-
-    sum='7';
-
-    if(sum==checksum)
-    {
-        for(j=0;j<34;j=j+3)
-        {
-            calibFlashBlock.Calibration_RAM.BP_Timing_Advance[k]=(((strg[j]-48u)*100u)+((strg[j+1]-48u)*10u)+((strg[j+2]-48u*1u)));
-            k++;
-        }
-
-        return(TRUE);
-    }
-    else
-    {
-        return(FALSE);
-    }
-}
-*/
 
 void Task_Fast(void)
 {
