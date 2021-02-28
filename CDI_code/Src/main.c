@@ -96,7 +96,7 @@ typedef struct
 typedef union 
 {
     dataCalibration Calibration_RAM;
-    uint32_t array_Calibration_RAM[(blockSize>>2)+1];   //Divided in 4 (32/4 = 8 byte)	  
+    uint32_t array_Calibration_RAM[blockSize>>2];   //Divided in 4 (32/4 = 8 byte)	  
     uint8_t array_Calibration_RAM_UART[blockSize];
 }calibrationBlock;
 
@@ -181,7 +181,7 @@ static void MX_USART3_UART_Init(void);
 
 void initializeCalibOnRAM(void)
 {
-    uint8_t i;
+    uint32_t i;
 
     for(i=0;i<sizeof(dataCalibration);i++)
     {
@@ -191,7 +191,7 @@ void initializeCalibOnRAM(void)
 
 void copyCalibUARTtoRAM(void)	
 {
-    uint8_t i;
+    uint32_t i;
 
     for(i=0;i<sizeof(dataCalibration);i++)
     {
@@ -211,9 +211,9 @@ void copyCalibFlashToRam(void)
 
 void transmitCalibToUART(void)
 {
-    uint16_t i;
+    uint32_t i;
     uint8_t checksum;
-    uint16_t buffer_length;
+    uint32_t buffer_length;
 
     if(transmstatus == TRANSMISSION_DONE)
     {
@@ -235,14 +235,13 @@ void transmitCalibToUART(void)
 }
 
 void Data_Transmission(void);
-//void copyCalibUARTtoRAM(void);
 
 void receiveData(void)
 {
     uint8_t command;
     uint8_t checksum;
-    uint16_t buffer_length;
-    uint16_t i;
+    uint32_t buffer_length;
+    uint32_t i;
 
     if(receptstatus == DATA_AVAILABLE_RX_BUFFER)
     {
@@ -259,20 +258,20 @@ void receiveData(void)
 
             switch(command)
             {
-                case 0x69:  transmitCalibToUART();
+								case 0x02:  flgTransmition = ON;
                             break;
 							
-							  case 0x7E:  copyCalibUARTtoRAM();
+								case 0x03:  flgTransmition = OFF;
                             break;
 							
 								case 0x47:  saveCalibRamToFlash();
 							              break;
-
-                case 0x02:  flgTransmition = ON;
+							
+                case 0x69:  transmitCalibToUART();
                             break;
-
-                case 0x03:  flgTransmition = OFF;
-                            break;
+							
+							  case 0x7E:  copyCalibUARTtoRAM();
+                            break;              
 
                 default:    break;
             }
@@ -283,16 +282,16 @@ void receiveData(void)
 }
 
 void systemInitialization(void)
-{
-	
+{	
 	  copyCalibFlashToRam();
 	
     //Identify if there are some data recorded
     if (calibFlashBlock.Calibration_RAM.Max_Engine_Speed == 0u)
     {
-				initializeCalibOnRAM();        
+				initializeCalibOnRAM();  
+        saveCalibRamToFlash();      
     }
-	
+	  		
     //Communication
     transmstatus = TRANSMISSION_DONE;
     receptstatus = RECEPTION_DONE;
@@ -465,73 +464,12 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
     }
 }
 
-uint8_t ConvertNum4DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
-{
-    uint8_t Mil, Cent, Dez, Unid;
-    uint16_t Man;
-
-    if(num<=9999u)
-    {
-        Mil = (num/1000u)+0x30;
-        Man = num%1000u;
-        Cent = (Man/100u)+0x30;
-        Man = Man%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
-
-        resp[i]=Mil;
-        resp[i+1u]=Cent;
-        resp[i+2u]=Dez;
-        resp[i+3u]=Unid;
-
-        return(TRUE);
-    }
-    else
-    {
-        return(FALSE);
-    }
-}
-
-uint8_t ConvertNum3DigToStr(uint16_t num, uint8_t resp[], uint8_t i)
-{
-    uint8_t Cent, Dez, Unid;
-    uint16_t Man;
-
-    if(num<=999u)
-    {
-        Cent = (num/100u)+0x30;
-        Man = num%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
-
-        resp[i]=Cent;
-        resp[i+1u]=Dez;
-        resp[i+2u]=Unid;
-
-        return(TRUE);
-    }
-    else
-    {
-        return(FALSE);
-    }
-}
-
-void Checksum(uint8_t strg[], uint8_t strg_length)
-{
-    uint8_t i,result;
-
-    for(i=0u;i<(strg_length)-2u;i++)
-    {
-        result+=strg[i];
-    }
-
-    strg[(strg_length)-1u]=result;
-}
-
-void transmitSystemInfo(uint8_t resp[])
+void transmitSystemInfo(void)
 {
     uint8_t Mil, Cent, Dez, Unid;
     uint16_t Man, num, num1;
+	  uint8_t checksum;
+	  uint32_t i;
 
     num = scenario.Engine_Speed;
     num1 = scenario.nAdv;
@@ -545,27 +483,32 @@ void transmitSystemInfo(uint8_t resp[])
         Dez = (Man/10u)+0x30;
         Unid = (Man%10u)+0x30;
 
-        resp[0]='R';
-        resp[1]=Mil;
-        resp[2]=Cent;
-        resp[3]=Dez;
-        resp[4]=Unid;
-        resp[5]='A';
+        UART3_rxBufferAlt[0]='R';
+        UART3_rxBufferAlt[1]=Mil;
+        UART3_rxBufferAlt[2]=Cent;
+        UART3_rxBufferAlt[3]=Dez;
+        UART3_rxBufferAlt[4]=Unid;
+        UART3_rxBufferAlt[5]='A';
 
         Cent = (num1/100u)+0x30;
         Man = num1%100u;
         Dez = (Man/10u)+0x30;
         Unid = (Man%10u)+0x30;
 
-        resp[6]=Cent;
-        resp[7]=Dez;
-        resp[8]=Unid;
-        resp[9]=0x0A; // '\n' - Line feed
+        UART3_rxBufferAlt[6]=Cent;
+        UART3_rxBufferAlt[7]=Dez;
+        UART3_rxBufferAlt[8]=Unid;        
 
-        Checksum(resp, sizeof(resp));
+        for(i=0; i < sizeof(UART3_rxBufferAlt)-3; i++)
+				{
+						checksum += UART3_rxBufferAlt[i];
+				}	
+				
+				UART3_rxBufferAlt[9]=checksum; 
+				UART3_rxBufferAlt[10]=0x0A; // '\n' - Line feed
 
         transmstatus = TRANSMITING;
-        HAL_UART_Transmit_DMA(&huart3, resp, sizeof(resp));
+        HAL_UART_Transmit_DMA(&huart3, UART3_rxBufferAlt, sizeof(UART3_rxBufferAlt));
 		}		
 }
 
@@ -587,22 +530,6 @@ void copyCalibRamToUart(void)
     {
         UART3_rxBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
     }
-}
-
-void Data_Transmission(void)
-{
-    ConvertNum4DigToStr(scenario.Engine_Speed, UART3_txBuffer, 0u);
-    ConvertNum3DigToStr(scenario.nAdv, UART3_txBuffer, 4u);
-    Checksum(UART3_txBuffer, sizeof(UART3_txBuffer));
-
-    transmstatus = TRANSMITING;
-    HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
-}
-
-void Data_Transmission1(void)
-{
-    transmstatus = TRANSMITING;
-    HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
 }
 
 uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
@@ -680,7 +607,7 @@ void Task_Medium(void)
 
     if(flgTransmition)
     {
-        transmitSystemInfo(UART3_rxBufferAlt);
+        transmitSystemInfo();
     }
 
     Statistics();
@@ -863,7 +790,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+   HAL_Init();
 
   /* USER CODE BEGIN Init */
 	systemInitialization();
