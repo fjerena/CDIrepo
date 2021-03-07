@@ -247,7 +247,7 @@ void transmitCalibToUART(void)
 void receiveData(void)
 {
     uint8_t command;
-    uint8_t checksum;
+    uint16_t checksum;
     uint32_t buffer_length;
     uint32_t i;
 
@@ -255,12 +255,13 @@ void receiveData(void)
     {
         buffer_length = sizeof(UART3_rxBuffer);
 
-        for(i=0;i<buffer_length-1;i++)
+        for(i=0;i<41;i++)
         {
             checksum += UART3_rxBuffer[i];
         }
 
-        if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)				
+        //if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)		
+        if(ON)				
         {
             command = UART3_rxBuffer[0];
 
