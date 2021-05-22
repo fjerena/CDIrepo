@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/A551633/Documents/My_Dev_Repo/Repo/CDI/CDI_do_Jerena/CDI_code/Inc
+HeaderPath=C:/Users/A551633/Documents/My_Dev_Repo/Repo/CDI/CDI_code/Inc
 HeaderFiles=stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;FreeRTOSConfig.h;
-SourcePath=C:/Users/A551633/Documents/My_Dev_Repo/Repo/CDI/CDI_do_Jerena/CDI_code/Src
+SourcePath=C:/Users/A551633/Documents/My_Dev_Repo/Repo/CDI/CDI_code/Src
 SourceFiles=stm32f1xx_it.c;stm32f1xx_hal_msp.c;main.c;freertos.c;stm32f1xx_hal_timebase_tim.c;
 
 [PreviousLibFiles]

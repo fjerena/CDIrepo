@@ -1,9 +1,9 @@
 --cpu Cortex-M3
 "cdi_do_jerena\startup_stm32f103xb.o"
+"cdi_do_jerena\flash_page.o"
 "cdi_do_jerena\main.o"
 "cdi_do_jerena\stm32f1xx_it.o"
 "cdi_do_jerena\stm32f1xx_hal_msp.o"
-"cdi_do_jerena\flash_page.o"
 "cdi_do_jerena\stm32f1xx_hal_gpio_ex.o"
 "cdi_do_jerena\stm32f1xx_hal_tim.o"
 "cdi_do_jerena\stm32f1xx_hal_tim_ex.o"
