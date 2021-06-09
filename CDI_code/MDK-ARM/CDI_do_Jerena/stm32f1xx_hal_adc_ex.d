@@ -27,3 +27,4 @@ cdi_do_jerena\stm32f1xx_hal_adc_ex.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f
 cdi_do_jerena\stm32f1xx_hal_adc_ex.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 cdi_do_jerena\stm32f1xx_hal_adc_ex.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 cdi_do_jerena\stm32f1xx_hal_adc_ex.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
+cdi_do_jerena\stm32f1xx_hal_adc_ex.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h

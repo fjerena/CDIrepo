@@ -1,0 +1,14 @@
+#This is my improvement in my development, store only the important files
+
+*.o
+*.d
+*crf
+*.lnp
+*.htm
+*.axf
+*.uvoptx
+*.uvprojx
+*.map
+*.dep
+*.hex
+*.ioc
