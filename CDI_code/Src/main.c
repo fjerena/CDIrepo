@@ -23,7 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "GENERAL_DEF.h"
+#include "SCHEDULLER.h"
 #include "FLASH_PAGE.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,120 +54,6 @@ UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
-#define nSteps                        64u
-#define TDutyTriggerK               1309u     //1.0ms for clock 72MHz
-#define TIntervPulseInv              655u     //0.5ms
-#define TPulseInv                   4582u     //3,5ms
-#define EngineSpeedPeriod_Min     785455u     //100rpm
-#define EngineSpeedPeriod_Max       5236u     //15000rpm
-#define TMR2_16bits                65536u
-#define RPM_const               78545455u
-#define FALSE                          0u
-#define TRUE                           1u
-#define OFF                            0u
-#define ON                             1u
-
-//Global variable
-enum Interruption_type {INT_FROM_CH1, INT_FROM_CH2, INT_FROM_CH3, INT_FROM_CH4} int_types;
-enum Event_status {EMPTY, PROGRAMMED} status;
-enum Engine_States {STOPPED, CRANKING, ACCELERATION, STEADY_STATE, DECELERATION, OVERSPEED} engstates;
-enum Transmission_Status {TRANSMITING, TRANSMISSION_DONE} transmstatus;
-enum Reception_Status {DATA_AVAILABLE_RX_BUFFER, RECEPTION_DONE} receptstatus;
-enum engineSpeed {LOW, HIGH} pulseMngmt;
-
-uint8_t flgTransmition = OFF;
-
-/*
-2 different speed
-Low  <  1200                                  // fixed advance ignition
-High >= First breakpoint(with restriction %)  // according igntion map
-%Due the sw conception, the first break point must be >= 1200rpm
-Engine Speed: Stopped, Acceleration, Steady State, Decelerate
-Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
-*/
-typedef struct
-{
-    uint8_t  sensorAngDisplecement;
-    uint16_t Max_Engine_Speed;
-    uint16_t BP_Engine_Speed[12];
-    uint8_t  BP_Timing_Advance[12];
-    uint8_t  alpha;
-    uint8_t  beta;
-    uint8_t  gamma;
-}dataCalibration;
-
-#define blockSize sizeof (dataCalibration)
-
-typedef union 
-{
-    dataCalibration Calibration_RAM;
-    uint32_t array_Calibration_RAM[blockSize>>2];   //Divided in 4 (32/4 = 8 byte)	  
-    uint8_t array_Calibration_RAM_UART[blockSize];
-}calibrationBlock;
-
-calibrationBlock calibFlashBlock;
-
-static const calibrationBlock Initial_Calibration = { 28, 7500,
-	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
-                                              { 1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000,12000,15000},
-                                              //{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}, 90, 80, 10};
-                                              //{  48,   48,   48,   48,   48,   48,   48,   48,   48,   48,    48,    48}, 90, 80, 10};
-                                              //{  32,   32,   32,   32,   32,   32,   32,   32,   32,   32,    32,    32}, 90, 80, 10};
-                                              //{  16,   16,   16,   16,   16,   16,   16,   16,   16,   16,    16,    16}, 90, 80, 10};
-                                              //{   0,    0,    0,    0,    0,    0,    0,    0,    0,    0,     0,     0}, 90, 80, 10};
-                                              //{  64,   54,   44,   39,   36,   32,   32,   36,   40,   45,     55,     64}, 90, 80, 10};
-                                              {   64,   58,   48,   38,   25,   15,    0,    0,   40,   45,   55,   64}, 90, 80, 10};
-                                              //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+								
-
-typedef struct system_info
-{
-    uint16_t Engine_Speed_old;
-    uint16_t Engine_Speed;
-    uint16_t engineSpeedPred;
-    uint16_t engineSpeedFiltered;
-    uint16_t avarageEngineSpeed;
-    int32_t  deltaEngineSpeed;
-    uint32_t Rising_Edge_Counter;
-    uint32_t triggerEventCounter;
-    uint32_t inversorEventCounter;
-    uint32_t Measured_Period;
-    uint32_t TDuty_Input_Signal;
-    uint32_t tdutyInputSignalPred;
-    uint32_t tdutyInputSignalPredLinear;
-    uint8_t  sensorAngDisplecementMeasured;
-    uint32_t TStep;
-    uint8_t  nAdv;
-    uint8_t  Cutoff_IGN;
-    uint8_t  Update_calc;
-    uint32_t nOverflow;
-    uint8_t  nOverflow_RE;
-    uint8_t  nOverflow_FE;
-}system_vars;
-
-volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-
-typedef struct timerproperty
-{
-    uint32_t counter;
-    uint8_t  timer_program;
-}timer_status;
-
-typedef struct pulseManagement
-{
-    uint8_t engSpeed;
-    timer_status timerCtrl[4];
-}programSheet;
-
-programSheet request = {0, {{0,0}, {0,0}, {0,0}, {0,0}}};
-programSheet Pulse_Program = { 0, {{0,0}, {0,0}, {0,0}, {0,0}}};
-
-typedef struct Scheduler
-{
-    uint8_t  program;
-    uint32_t target_time;
-}sched_var;
-
-sched_var array_sched_var[3];
 
 //UART Communication
 uint8_t UART3_txBuffer[blockSize+2];
@@ -371,6 +260,63 @@ void Set_Ouput_Inversor(uint8_t Value)
     }
 }
 
+void Hardware_Test(void)
+{
+		static uint8_t task=0, spark=0;
+		static uint8_t divisor=5;
+	
+	  divisor--;
+	
+	  if (divisor==0)
+		{	
+	
+		/*
+		switch(task)
+		{	
+			case 0:  Set_Ouput_LED();
+							 task=1;
+							 break;
+			
+			case 1:  Set_Ouput_LED_Red();
+							 task=2;
+							 break;
+			
+			case 2:  Set_Ouput_LED_Blue();
+							 task=3;
+							 break;
+			
+			case 3:  Set_Ouput_LED_Yellow();	
+							 task=0;
+							 break;
+			
+			default: break;
+		}	
+		*/
+		switch(spark)
+		{	
+			case 0:  Set_Ouput_Inversor(ON);
+							 spark=1;
+							 break;
+			
+			case 1:  Set_Ouput_Inversor(OFF);
+							 spark=2;
+							 break;
+			
+			case 2:  Set_Ouput_Trigger(ON);
+							 spark=3;
+							 break;
+			
+			case 3:  Set_Ouput_Trigger(OFF);
+							 spark=0;
+							 break;
+			
+			default: break;
+		}	
+		
+		divisor=5;
+		}
+}	
+
 // A iterative binary search function. It returns
 // location of x in given array arr[l..r] if present,
 // otherwise -1
@@ -572,12 +518,13 @@ void Statistics(void)
 void Task_Fast(void)
 {
     //HAL_IWDG_Init(&hiwdg);
-	  Set_Ouput_LED_Red();	  
+	  //Set_Ouput_LED_Red();	 
+    //Hardware_Test();	
 }
 
 void Task_Medium(void)
 {    
-    Set_Ouput_LED_Blue();	
+    //Set_Ouput_LED_Blue();	
     Cut_Igntion();
     receiveData();
 
@@ -586,33 +533,15 @@ void Task_Medium(void)
         transmitSystemInfo();
     }
 
-    Statistics();
+    Statistics();		
 }
 
 void Task_Slow(void)
 {
-	  Set_Ouput_LED_Yellow();
-	  Set_Ouput_LED();
+	  //Set_Ouput_LED_Yellow();
+	  //Set_Ouput_LED();
+		
     Engine_STOP_test();
-}
-
-void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos)
-{
-    volatile uint32_t counter;
-
-    counter = HAL_GetTick();
-
-    if(var[pos].program == FALSE)
-    {
-        var[pos].target_time = counter+period;
-        var[pos].program = TRUE;
-    }
-
-    if(counter>=var[pos].target_time)
-    {
-        var[pos].program = FALSE;
-        (*func)();
-    }
 }
 
 uint32_t predictionCalc(uint32_t period)
@@ -813,8 +742,7 @@ int main(void)
     //HAL_UART_Receive_IT(&huart3, UART3_rxBuffer, 12);
 
     HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));
-
-
+		
     //HAL_TIM_Base_Start_IT(&htim4);
 
     //Maybe I don´t need initiate the timers...

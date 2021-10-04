@@ -466,7 +466,7 @@ ork --depend=cdi_do_jerena\startup_stm32f103xb.d -ocdi_do_jerena\startup_stm32f
 103xb.o -I.\RTE\_CDI_do_Jerena -IC:\Users\A551633\AppData\Local\Arm\Packs\ARM\C
 MSIS\5.7.0\CMSIS\Core\Include -IC:\Users\A551633\AppData\Local\Arm\Packs\Keil\S
 TM32F1xx_DFP\2.3.0\Device\Include --predefine="__EVAL SETA 1" --predefine="__MI
-CROLIB SETA 1" --predefine="__UVISION_VERSION SETA 530" --predefine="_RTE_ SETA
+CROLIB SETA 1" --predefine="__UVISION_VERSION SETA 534" --predefine="_RTE_ SETA
  1" --predefine="STM32F10X_MD SETA 1" --predefine="_RTE_ SETA 1" --list=startup
 _stm32f103xb.lst startup_stm32f103xb.s
 

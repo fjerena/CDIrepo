@@ -1,14 +1,22 @@
-#This is my improvement in my development, store only the important files
+# A .gitignore for Keil projects.
+# Taken mostly from http://www.keil.com/support/man/docs/uv4/uv4_b_filetypes.htm
 
-*.o
-*.d
-*crf
-*.lnp
-*.htm
+#Folder MDK-ARM
+
+*.scvd
+*.uvguix.*
+*.lst
+
+#Folder MDK-ARM\RD135EFI
+
 *.axf
-*.uvoptx
-*.uvprojx
-*.map
+*.crf
+*.d
 *.dep
 *.hex
-*.ioc
+*.iex
+*.lnp
+*.map
+*.htm
+*.o
+*.sct

@@ -10,7 +10,7 @@
       <TargetName>CDI_do_Jerena</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
-      <pCCUsed>5060750::V5.06 update 6 (build 750)::.\ARMCC</pCCUsed>
+      <pCCUsed>5060960::V5.06 update 7 (build 960)::.\ARMCC</pCCUsed>
       <uAC6>0</uAC6>
       <TargetOption>
         <TargetCommonOption>
@@ -413,6 +413,16 @@
               <FileType>1</FileType>
               <FilePath>../Src/stm32f1xx_hal_msp.c</FilePath>
             </File>
+            <File>
+              <FileName>SCHEDULLER.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\SCHEDULLER.c</FilePath>
+            </File>
+            <File>
+              <FileName>GENERAL_DEF.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\GENERAL_DEF.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -534,11 +544,6 @@
     <Layers>
       <Layer>
         <LayName>&lt;Project Info&gt;</LayName>
-        <LayDesc></LayDesc>
-        <LayUrl></LayUrl>
-        <LayKeys></LayKeys>
-        <LayCat></LayCat>
-        <LayLic></LayLic>
         <LayTarg>0</LayTarg>
         <LayPrjMark>1</LayPrjMark>
       </Layer>
