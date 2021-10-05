@@ -28,6 +28,7 @@
 #include "SCHEDULLER.h"
 #include "FLASH_PAGE.h"
 #include "USART_COMM.h"
+#include "TIMER_FUNC.h"
 
 /* USER CODE END Includes */
 
@@ -165,29 +166,6 @@ void Engine_STOP_test(void)
             scenario.Engine_Speed = 0u;
             program = FALSE;
         }
-    }
-}
-
-void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, uint8_t *resp_var)
-{
-    uint32_t counter;
-
-    counter = HAL_GetTick();
-
-    if(var[pos].program == FALSE)
-    {
-        var[pos].target_time = counter+period;
-        var[pos].program = TRUE;
-    }
-
-    if(counter>=var[pos].target_time)
-    {
-        var[pos].program = FALSE;
-        *resp_var = TRUE;
-    }
-    else
-    {
-        *resp_var = FALSE;
     }
 }
 

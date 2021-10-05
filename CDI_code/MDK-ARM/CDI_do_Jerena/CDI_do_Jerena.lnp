@@ -8,6 +8,7 @@
 "cdi_do_jerena\stm32f1xx_it.o"
 "cdi_do_jerena\stm32f1xx_hal_msp.o"
 "cdi_do_jerena\io_control.o"
+"cdi_do_jerena\timer_func.o"
 "cdi_do_jerena\stm32f1xx_hal_gpio_ex.o"
 "cdi_do_jerena\stm32f1xx_hal_adc.o"
 "cdi_do_jerena\stm32f1xx_hal_adc_ex.o"

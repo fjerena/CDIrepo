@@ -433,6 +433,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\IO_CONTROL.c</FilePath>
             </File>
+            <File>
+              <FileName>TIMER_FUNC.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\TIMER_FUNC.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
