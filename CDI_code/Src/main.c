@@ -29,6 +29,7 @@
 #include "FLASH_PAGE.h"
 #include "USART_COMM.h"
 #include "TIMER_FUNC.h"
+#include "MATH_LIB.h"
 
 /* USER CODE END Includes */
 
@@ -71,71 +72,6 @@ static void MX_ADC2_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
-// A iterative binary search function. It returns
-// location of x in given array arr[l..r] if present,
-// otherwise -1
-uint8_t binarySearch(volatile uint16_t array[], uint8_t first, uint8_t last, uint16_t search)
-{
-    uint8_t middle;
-
-    middle = (first+last)>>1;
-
-    while (first <= last)
-    {
-        if((search >= array[middle])&&
-           (search <= array[middle+1]))
-        {
-            return middle;
-        }
-        else if(search > array[middle+1])
-        {
-            first = middle+1;
-        }
-        else //search < array[middle]
-        {
-            last = middle;
-        }
-
-        middle = (first + last)>>1;
-    }
-
-    return (255u);
-}
-
-//This function was prepared to return a 8 bits value, however is saturated  in 64
-//Its mandatory in rpm array there are some difference value between two adjacent fields, if do not respect will cause an error return 0xFF
-uint8_t linearInterpolation(uint16_t value, volatile uint16_t x_array[], volatile uint8_t y_array[])
-{
-    uint8_t interp_index;
-    uint8_t interp_res;
-
-    //Advance saturation for array min and max
-    if(value<x_array[0])
-    {
-        return(y_array[0]);
-    }
-    else if(value>x_array[11])
-    {
-        return(y_array[11]);
-    }
-
-    interp_index = binarySearch(x_array, 0, 11, value);
-
-    if(((x_array[interp_index+1]-x_array[interp_index])!=0)&&(interp_index!=255u))
-    {
-        interp_res = (((y_array[interp_index+1]-y_array[interp_index])*(value-x_array[interp_index]))/(x_array[interp_index+1]-x_array[interp_index]))+y_array[interp_index];
-        if(interp_res>64u)
-        {
-            interp_res = 64u;
-        }
-        return(interp_res);
-    }
-    else
-    {
-        return(255u);
-    }
-}
-
 void Cut_Igntion(void)
 {
     if(scenario.Engine_Speed>calibFlashBlock.Calibration_RAM.Max_Engine_Speed)
@@ -169,35 +105,6 @@ void Engine_STOP_test(void)
     }
 }
 
-uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
-{
-    static uint8_t varOld = 0u;
-    uint8_t varFiltered;
-
-    varFiltered = var + (((varOld-var)*k)/255u);
-    varOld = var;
-
-    return(varFiltered);
-}
-
-uint16_t digitalFilter16bits(uint16_t var, uint8_t k)
-{
-    static uint16_t varOld = 0u;
-    uint16_t varFiltered;
-
-    varFiltered = var + (((varOld-var)*k)/255u);
-    varOld = var;
-
-    return(varFiltered);
-}
-
-void Statistics(void)
-{
-    scenario.engineSpeedFiltered = digitalFilter16bits(scenario.Engine_Speed, 50u);
-    scenario.avarageEngineSpeed = (scenario.avarageEngineSpeed+scenario.Engine_Speed)>>1;
-    scenario.sensorAngDisplecementMeasured = (scenario.TDuty_Input_Signal*360u)/scenario.Measured_Period;
-}
-
 void Task_Fast(void)
 {
     //HAL_IWDG_Init(&hiwdg);
@@ -220,29 +127,6 @@ void Task_Medium(void)
 void Task_Slow(void)
 {
 	  Engine_STOP_test();
-}
-
-uint32_t predictionCalc(uint32_t period)
-{
-//http://www.mstarlabs.com/control/engspeed.html
-//http://www.megamanual.com/ms2/alphabeta.htm#:~:text=MegaSquirt%2DII%20code%20version%202.83,2nd%20derivative'%20prediction%20options).
-    static int32_t errt;
-    static int32_t dts;
-    static int32_t dtpred;
-    static int32_t tddts;
-    static int32_t tddtpred;
-    static int32_t t2dddts;
-
-    errt = period - dtpred;
-
-    //alpha-beta-gamma filter prediction
-    dts = dtpred + ((calibFlashBlock.Calibration_RAM.alpha * errt) / 100u);
-    tddts = tddtpred + ((calibFlashBlock.Calibration_RAM.beta * errt) / 100u);
-    t2dddts = t2dddts + ((calibFlashBlock.Calibration_RAM.gamma * errt) / 100u);
-    dtpred = dts + tddts + (t2dddts >> 1u);
-    tddtpred = tddts + t2dddts;
-
-    return(tddtpred);
 }
 
 uint8_t Ignition_nTime(uint16_t eng_speed)

@@ -34,7 +34,8 @@ void Hardware_Init(void)
 
 void Hardware_Test(void)
 {
-		static uint8_t task=0, spark=0;
+		//static uint8_t task=0, spark=0;
+	  static uint8_t task=0;
 		static uint8_t divisor=5;
 	
 	  divisor--;

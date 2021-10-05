@@ -35,3 +35,4 @@ cdi_do_jerena\main.o: ../Inc/SCHEDULLER.h
 cdi_do_jerena\main.o: ../Inc/FLASH_PAGE.h
 cdi_do_jerena\main.o: ../Inc/USART_COMM.h
 cdi_do_jerena\main.o: ../Inc/TIMER_FUNC.h
+cdi_do_jerena\main.o: ../Inc/MATH_LIB.h

@@ -438,6 +438,11 @@
               <FileType>1</FileType>
               <FilePath>..\Src\TIMER_FUNC.c</FilePath>
             </File>
+            <File>
+              <FileName>MATH_LIB.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\MATH_LIB.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

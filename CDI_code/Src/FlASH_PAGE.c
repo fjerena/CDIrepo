@@ -19,7 +19,7 @@ static uint32_t GetPage(uint32_t Address)
 	  }
   }
 
-  return -1;
+  return 696969;
 }
 
 uint32_t Flash_Write_Data (uint32_t StartPageAddress, uint32_t * DATA_32, uint32_t dataSize)
