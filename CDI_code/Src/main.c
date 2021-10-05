@@ -23,6 +23,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "IO_CONTROL.h"
 #include "GENERAL_DEF.h"
 #include "SCHEDULLER.h"
 #include "FLASH_PAGE.h"
@@ -68,124 +69,6 @@ static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
-void Turn_OFF_Int_input(void)
-{
-    HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
-    HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_2);
-}
-
-void Turn_ON_Int_input(void)
-{
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_2);
-}
-
-void Set_Ouput_LED(void)
-{
-    HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
-}
-
-void Set_Ouput_LED_Red(void)
-{
-    HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_12);
-}
-
-void Set_Ouput_LED_Blue(void)
-{
-    HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_13);
-}
-
-void Set_Ouput_LED_Yellow(void)
-{
-    HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_14);
-}
-
-void Set_Ouput_Trigger(uint8_t Value)
-{
-    if (Value == ON)
-    {
-        HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_SET);
-    }
-    else
-    {
-        HAL_GPIO_WritePin(GPIOA,GPIO_PIN_2,GPIO_PIN_RESET);
-    }
-}
-
-void Set_Ouput_InterruptionTest(void)
-{
-    HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_6);
-}
-
-void Set_Ouput_Inversor(uint8_t Value)
-{
-    if (Value == ON)
-    {
-        HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_SET);
-    }
-    else
-    {
-        HAL_GPIO_WritePin(GPIOB,GPIO_PIN_6,GPIO_PIN_RESET);
-    }
-}
-
-void Hardware_Test(void)
-{
-		static uint8_t task=0, spark=0;
-		static uint8_t divisor=5;
-	
-	  divisor--;
-	
-	  if (divisor==0)
-		{	
-	
-		/*
-		switch(task)
-		{	
-			case 0:  Set_Ouput_LED();
-							 task=1;
-							 break;
-			
-			case 1:  Set_Ouput_LED_Red();
-							 task=2;
-							 break;
-			
-			case 2:  Set_Ouput_LED_Blue();
-							 task=3;
-							 break;
-			
-			case 3:  Set_Ouput_LED_Yellow();	
-							 task=0;
-							 break;
-			
-			default: break;
-		}	
-		*/
-		switch(spark)
-		{	
-			case 0:  Set_Ouput_Inversor(ON);
-							 spark=1;
-							 break;
-			
-			case 1:  Set_Ouput_Inversor(OFF);
-							 spark=2;
-							 break;
-			
-			case 2:  Set_Ouput_Trigger(ON);
-							 spark=3;
-							 break;
-			
-			case 3:  Set_Ouput_Trigger(OFF);
-							 spark=0;
-							 break;
-			
-			default: break;
-		}	
-		
-		divisor=5;
-		}
-}	
 
 // A iterative binary search function. It returns
 // location of x in given array arr[l..r] if present,
@@ -340,13 +223,11 @@ void Statistics(void)
 void Task_Fast(void)
 {
     //HAL_IWDG_Init(&hiwdg);
-	  //Set_Ouput_LED_Red();	 
-    //Hardware_Test();	
+	  Hardware_Test();	
 }
 
 void Task_Medium(void)
 {    
-    //Set_Ouput_LED_Blue();	
     Cut_Igntion();
     receiveData();
 
@@ -360,10 +241,7 @@ void Task_Medium(void)
 
 void Task_Slow(void)
 {
-	  //Set_Ouput_LED_Yellow();
-	  //Set_Ouput_LED();
-		
-    Engine_STOP_test();
+	  Engine_STOP_test();
 }
 
 uint32_t predictionCalc(uint32_t period)
