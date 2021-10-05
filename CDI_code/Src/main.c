@@ -26,6 +26,7 @@
 #include "GENERAL_DEF.h"
 #include "SCHEDULLER.h"
 #include "FLASH_PAGE.h"
+#include "USART_COMM.h"
 
 /* USER CODE END Includes */
 
@@ -50,15 +51,11 @@ ADC_HandleTypeDef hadc2;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
-UART_HandleTypeDef huart3;
-DMA_HandleTypeDef hdma_usart3_rx;
+UART_HandleTypeDef huart1;
+DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 
-//UART Communication
-uint8_t UART3_txBuffer[blockSize+2];
-uint8_t UART3_rxBuffer[blockSize+2];
-uint8_t UART3_rxBufferAlt[11];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,135 +66,8 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
-static void MX_USART3_UART_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
-void initializeCalibOnRAM(void)
-{
-    uint32_t i;
-
-    for(i=0;i<sizeof(dataCalibration);i++)
-    {
-			  calibFlashBlock.array_Calibration_RAM_UART[i] = Initial_Calibration.array_Calibration_RAM_UART[i];
-    }
-}
-
-void copyCalibUartToRam(void)	
-{
-    uint32_t i;
-
-    for(i=0;i<sizeof(dataCalibration);i++)
-    {
-        calibFlashBlock.array_Calibration_RAM_UART[i] = UART3_rxBuffer[i+1];
-    }
-}
-
-void copyCalibRamToUart(void)
-{
-    uint8_t i;
-
-    for(i=0;i<blockSize;i++)
-    {
-        UART3_rxBuffer[i] = calibFlashBlock.array_Calibration_RAM[i];
-    }
-}
-
-void saveCalibRamToFlash(void)
-{
-	  Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);	  	
-}
-
-void copyCalibFlashToRam(void)
-{
-    Flash_Read_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
-}
-
-void transmitCalibToUART(void)
-{
-    uint32_t i;
-    uint8_t checksum;
-    uint32_t buffer_length;
-
-    if(transmstatus == TRANSMISSION_DONE)
-    {
-        buffer_length = sizeof(UART3_txBuffer);
-
-        UART3_txBuffer[0] = 0x7E;
-        checksum = UART3_txBuffer[0];
-
-        for (i=1;i<buffer_length-2;i++)
-        {
-            UART3_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
-            checksum += UART3_txBuffer[i];
-        }
-
-        UART3_txBuffer[buffer_length-1] = checksum;
-        transmstatus = TRANSMITING;
-        HAL_UART_Transmit_DMA(&huart3, UART3_txBuffer, sizeof(UART3_txBuffer));
-    }
-}
-
-void receiveData(void)
-{
-    uint8_t command;
-    uint16_t checksum;
-    uint32_t buffer_length;
-    uint32_t i;
-
-    if(receptstatus == DATA_AVAILABLE_RX_BUFFER)
-    {
-        buffer_length = sizeof(UART3_rxBuffer);
-
-        for(i=0;i<41;i++)
-        {
-            checksum += UART3_rxBuffer[i];
-        }
-
-        //if((UART3_rxBuffer[buffer_length-1]-checksum) == 0u)		
-        if(ON)				
-        {
-            command = UART3_rxBuffer[0];
-
-            switch(command)
-            {
-								case 0x02:  flgTransmition = ON;
-                            break;
-							
-								case 0x03:  flgTransmition = OFF;
-                            break;
-							
-								case 0x47:  saveCalibRamToFlash();
-							              break;
-							
-                case 0x69:  transmitCalibToUART();
-                            break;
-							
-							  case 0x7E:  copyCalibUartToRam();
-                            break;              
-
-                default:    break;
-            }
-        }
-
-        receptstatus = RECEPTION_DONE;
-    }
-}
-
-void systemInitialization(void)
-{	
-	  copyCalibFlashToRam();
-	
-    //Identify if there are some data recorded
-    if (calibFlashBlock.Calibration_RAM.Max_Engine_Speed == 0u)
-    {
-				initializeCalibOnRAM();  
-        saveCalibRamToFlash();      
-    }
-	  		
-    //Communication
-    transmstatus = TRANSMISSION_DONE;
-    receptstatus = RECEPTION_DONE;
-}
 
 void Turn_OFF_Int_input(void)
 {
@@ -438,54 +308,6 @@ void Timeout(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos, 
     }
 }
 
-void transmitSystemInfo(void)
-{
-    uint8_t Mil, Cent, Dez, Unid;
-    uint16_t Man, num, num1;
-	  uint8_t checksum;
-	  uint32_t i;
-
-    num = scenario.Engine_Speed;
-    num1 = scenario.nAdv;
-
-    if((num<=9999u)&&(num1<=999u))
-    {
-        Mil = (num/1000u)+0x30;
-        Man = num%1000u;
-        Cent = (Man/100u)+0x30;
-        Man = Man%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
-
-        UART3_rxBufferAlt[0]='R';
-        UART3_rxBufferAlt[1]=Mil;
-        UART3_rxBufferAlt[2]=Cent;
-        UART3_rxBufferAlt[3]=Dez;
-        UART3_rxBufferAlt[4]=Unid;
-        UART3_rxBufferAlt[5]='A';
-
-        Cent = (num1/100u)+0x30;
-        Man = num1%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
-
-        UART3_rxBufferAlt[6]=Cent;
-        UART3_rxBufferAlt[7]=Dez;
-        UART3_rxBufferAlt[8]=Unid;        
-
-        for(i=0; i < sizeof(UART3_rxBufferAlt)-3; i++)
-				{
-						checksum += UART3_rxBufferAlt[i];
-				}	
-				
-				UART3_rxBufferAlt[9]=checksum; 
-				UART3_rxBufferAlt[10]=0x0A; // '\n' - Line feed
-
-        transmstatus = TRANSMITING;
-        HAL_UART_Transmit_DMA(&huart3, UART3_rxBufferAlt, sizeof(UART3_rxBufferAlt));
-		}		
-}
-
 uint8_t digitalFilter8bits(uint8_t var, uint8_t k)
 {
     static uint8_t varOld = 0u;
@@ -671,7 +493,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));
+    HAL_UART_Receive_DMA(&huart1, (uint8_t*)UART1_rxBuffer, sizeof(UART1_rxBuffer));
     receptstatus = DATA_AVAILABLE_RX_BUFFER;
 }
 
@@ -717,7 +539,7 @@ int main(void)
   MX_TIM4_Init();
   MX_ADC1_Init();
   MX_ADC2_Init();
-  MX_USART3_UART_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
     //I don´t know the difference between these two different statment
@@ -741,7 +563,7 @@ int main(void)
     //hdma_usart3_rx.Instance->CR &
     //HAL_UART_Receive_IT(&huart3, UART3_rxBuffer, 12);
 
-    HAL_UART_Receive_DMA(&huart3, (uint8_t*)UART3_rxBuffer, sizeof(UART3_rxBuffer));
+    HAL_UART_Receive_DMA(&huart1, (uint8_t*)UART1_rxBuffer, sizeof(UART1_rxBuffer));
 		
     //HAL_TIM_Base_Start_IT(&htim4);
 
@@ -785,7 +607,7 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -798,7 +620,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -836,7 +658,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 1 */
 
   /* USER CODE END ADC1_Init 1 */
-  /** Common config 
+  /** Common config
   */
   hadc1.Instance = ADC1;
   hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
@@ -849,7 +671,7 @@ static void MX_ADC1_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_1;
@@ -881,7 +703,7 @@ static void MX_ADC2_Init(void)
   /* USER CODE BEGIN ADC2_Init 1 */
 
   /* USER CODE END ADC2_Init 1 */
-  /** Common config 
+  /** Common config
   */
   hadc2.Instance = ADC2;
   hadc2.Init.ScanConvMode = ADC_SCAN_DISABLE;
@@ -894,7 +716,7 @@ static void MX_ADC2_Init(void)
   {
     Error_Handler();
   }
-  /** Configure Regular Channel 
+  /** Configure Regular Channel
   */
   sConfig.Channel = ADC_CHANNEL_3;
   sConfig.Rank = ADC_REGULAR_RANK_1;
@@ -1047,51 +869,51 @@ static void MX_TIM4_Init(void)
 }
 
 /**
-  * @brief USART3 Initialization Function
+  * @brief USART1 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_USART3_UART_Init(void)
+static void MX_USART1_UART_Init(void)
 {
 
-  /* USER CODE BEGIN USART3_Init 0 */
+  /* USER CODE BEGIN USART1_Init 0 */
 
-  /* USER CODE END USART3_Init 0 */
+  /* USER CODE END USART1_Init 0 */
 
-  /* USER CODE BEGIN USART3_Init 1 */
+  /* USER CODE BEGIN USART1_Init 1 */
 
-  /* USER CODE END USART3_Init 1 */
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart3) != HAL_OK)
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USART3_Init 2 */
+  /* USER CODE BEGIN USART1_Init 2 */
 
-  /* USER CODE END USART3_Init 2 */
+  /* USER CODE END USART1_Init 2 */
 
 }
 
-/** 
+/**
   * Enable DMA controller clock
   */
-static void MX_DMA_Init(void) 
+static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Channel3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
 
 }
 
@@ -1114,14 +936,14 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_6 
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_6
                           |GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_12 
-                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3 
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7 
-                          |GPIO_PIN_8, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -1157,12 +979,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 PB12 PB13 PB14 
-                           PB15 PB3 PB4 PB5 
-                           PB6 PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14 
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5 
-                          |GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pins : PB2 PB10 PB11 PB12
+                           PB13 PB14 PB15 PB3
+                           PB4 PB5 PB6 PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1174,16 +996,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA9 PA12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA10 PA11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  /*Configure GPIO pin : PA11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB8 */
@@ -1380,7 +1202,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

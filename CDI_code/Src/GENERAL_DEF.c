@@ -7,8 +7,6 @@
 
 #include "GENERAL_DEF.h"
 
-uint8_t flgTransmition=OFF;
-
 calibrationBlock calibFlashBlock;
 
 const calibrationBlock Initial_Calibration = { 28, 7500,
@@ -31,6 +29,4 @@ programSheet Pulse_Program = { 0, {{0,0}, {0,0}, {0,0}, {0,0}}};
 enum Interruption_type int_types=INT_FROM_CH1;
 enum Event_status status=EMPTY;
 enum Engine_States engstates=STOPPED;
-enum Transmission_Status transmstatus=TRANSMISSION_DONE;
-enum Reception_Status receptstatus=RECEPTION_DONE;
 enum engineSpeed pulseMngmt=LOW;

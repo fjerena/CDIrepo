@@ -33,16 +33,8 @@ extern enum Event_status status;
 enum Engine_States{STOPPED,CRANKING,ACCELERATION,STEADY_STATE,DECELERATION,OVERSPEED};
 extern enum Engine_States engstates;
 
-enum Transmission_Status{TRANSMITING,TRANSMISSION_DONE};
-extern enum Transmission_Status transmstatus;
-
-enum Reception_Status{DATA_AVAILABLE_RX_BUFFER,RECEPTION_DONE};
-extern enum Reception_Status receptstatus;
-
 enum engineSpeed{LOW,HIGH};
 extern enum engineSpeed pulseMngmt;
-
-extern uint8_t flgTransmition;
 
 /*
 2 different speed
