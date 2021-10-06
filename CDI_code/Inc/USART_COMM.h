@@ -11,7 +11,6 @@
 /*Include to use in my code*/
 #include "stm32f1xx_hal.h"
 #include "GENERAL_DEF.h"
-#include "FLASH_PAGE.h"
 
 //Definition
 enum Transmission_Status{TRANSMITING,TRANSMISSION_DONE};
@@ -37,8 +36,17 @@ extern uint8_t UART1_rxBuffer[blockSize+2];
 
 //In this case, all modules that include USART_COMM.h, these functions will be available, if they aren´t declared 
 //compiler wil set a warning message 
+void initializeCalibOnRAM(void);
+void copyCalibUartToRam(void);
+void copyCalibRamToUart(void);
+void saveCalibRamToFlash(void);
+void copyCalibFlashToRam(void);
+void transmitCalibToUART(void);
 void receiveData(void);
 void systemInitialization(void);
 void transmitSystemInfo(void);
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
 
 #endif /* INC_USART_COMM_H_ */

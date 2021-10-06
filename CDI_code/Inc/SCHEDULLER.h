@@ -9,7 +9,6 @@
 #define INC_SCHEDULLER_H_
 
 #include "stm32f1xx_hal.h"
-#include "GENERAL_DEF.h"
 
 typedef struct Scheduler
 {
@@ -20,6 +19,10 @@ typedef struct Scheduler
 extern sched_var array_sched_var[3];   //Scheduller
 
 void Periodic_task(uint32_t period, void (*func)(void), sched_var var[], uint8_t pos);
+void Task_Fast(void);
+void Task_Medium(void);
+void Task_Slow(void);
+void Running_Scheduller(void);
 
 #endif /* INC_SCHEDULLER_H_ */
 

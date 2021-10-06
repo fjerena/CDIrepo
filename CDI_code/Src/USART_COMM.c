@@ -6,6 +6,7 @@
  */
 
 #include "USART_COMM.h"
+#include "FLASH_PAGE.h"
 
 //Local definition (if I want to share this variables with another modules, I need to include in header file extern + variable name
 /*****************************/
@@ -202,4 +203,22 @@ void transmitSystemInfo(void)
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart1, UART1_rxBufferAlt, sizeof(UART1_rxBufferAlt));
 		}		
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    transmstatus = TRANSMISSION_DONE;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    HAL_UART_Receive_DMA(&huart1, (uint8_t*)UART1_rxBuffer, sizeof(UART1_rxBuffer));
+    receptstatus = DATA_AVAILABLE_RX_BUFFER;
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    static int8_t k;
+
+    k++;
 }
