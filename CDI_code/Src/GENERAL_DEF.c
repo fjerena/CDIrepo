@@ -1,5 +1,5 @@
 /*
- * GEN_DEF.c
+ * GENERAL_DEF.c
  *
  *  Created on: 13-Jul-2021
  *      Author: Jerena
