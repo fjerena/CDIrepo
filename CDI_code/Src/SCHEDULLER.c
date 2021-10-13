@@ -40,6 +40,8 @@ void Task_Fast(void)
 
 void Task_Medium(void)
 {    
+		Read_Analog_Sensors();
+	
     Cut_Igntion();
     receiveData();
 

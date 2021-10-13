@@ -10,6 +10,9 @@
 
 #include "stm32f1xx_hal.h"
 
+extern ADC_HandleTypeDef hadc1;
+//extern ADC_HandleTypeDef hadc2;
+
 typedef struct Scheduler
 {
     uint8_t  program;

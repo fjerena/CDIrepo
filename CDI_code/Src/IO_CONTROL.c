@@ -5,9 +5,8 @@
  *      Author: Jerena
  */
 
-//#define IO_CONTROL_c
-
 #include "IO_CONTROL.h"
+#include "MATH_LIB.h"
 
 /*
 void Turn_OFF_Int_input(void)
@@ -23,6 +22,9 @@ void Turn_ON_Int_input(void)
 }
 */
 
+uint32_t adcInputs[4]={0,0,0,0};
+volatile sensors_measur sensors={0,0,0,0,0,0,0,0,0,0,0,0};  //All sensor variable related
+	
 //Hardware initialization
 void Hardware_Init(void)
 {
@@ -191,6 +193,40 @@ void Set_Ouput_InterruptionTest(void)
     HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_6);
 }
 
+void HighVoltage(void)
+{
+		sensors.HighVoltRaw=adcInputs[0];
+	  sensors.HighVolt=(sensors.HighVoltRaw*150)/4095;
+}	
 
+void BatteryVoltage(void)
+{
+    //Needs to apply a filter because the real circuit doesn´t have one...
+	  sensors.VBatRaw=adcInputs[1];
+    sensors.VBatFilt=Filter16bits(sensors.VBatFilt,sensors.VBatRaw,100u);
+    sensors.VBat=(uint8_t)(((sensors.VBatFilt*347*455)/(4095*1000))+4);
+}
+
+void EngineTemp(void)
+{
+		sensors.EngineTempRaw=adcInputs[2];
+    sensors.EngineTemp=(sensors.EngineTempRaw*150)/4095;	  
+}
+
+void BoardTemp(void)
+{
+    //Needs to apply a filter due the sensor characteristics
+	  sensors.TempBoardRaw=adcInputs[3];
+    sensors.TempBoardFilt=Filter16bits(sensors.TempBoardFilt,sensors.TempBoardRaw,80u);
+    sensors.TempBoard=((V25-sensors.TempBoardFilt)/Avg_Slope)+25;
+}
+
+void Read_Analog_Sensors(void)
+{	
+	  HighVoltage();
+		BatteryVoltage();
+		EngineTemp();		
+		BoardTemp();		
+}	
 
 
