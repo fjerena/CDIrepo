@@ -9,9 +9,8 @@
 #define INC_TIMER_FUNC_H_
 
 #include "stm32f1xx_hal.h"
-#include "GENERAL_DEF.h"
 
-#define nTimer                        16
+#define nTimer	16
 
 enum TimerID{Timer0,Timer1,Timer2,Timer3,Timer4,Timer5,Timer6,Timer7,Timer8,Timer9,Timer10,Timer11,Timer12,Timer13,Timer14,Timer15};// TimerNumb;
 

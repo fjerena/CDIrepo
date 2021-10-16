@@ -32,6 +32,8 @@ void Hardware_Init(void)
     Set_Output_LED_Red(OFF);
     Set_Output_LED_Blue(OFF);
     Set_Output_LED_Yellow(OFF);    
+		Set_Ouput_Inversor(OFF);
+		Set_Ouput_Trigger(OFF);
 }
 
 void Hardware_Test(void)

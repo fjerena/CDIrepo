@@ -141,7 +141,7 @@ void receiveData(void)
     }
 }
 
-void systemInitialization(void)
+void memoryInitialization(void)
 {	
 	  copyCalibFlashToRam();
 	
@@ -154,7 +154,7 @@ void systemInitialization(void)
 	  		
     //Communication
     transmstatus = TRANSMISSION_DONE;
-    receptstatus = RECEPTION_DONE;
+    receptstatus = RECEPTION_DONE;	
 }
 
 void transmitSystemInfo(void)

@@ -448,6 +448,11 @@
               <FileType>1</FileType>
               <FilePath>../Src/stm32f1xx_hal_msp.c</FilePath>
             </File>
+            <File>
+              <FileName>APPLICATION.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\APPLICATION.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

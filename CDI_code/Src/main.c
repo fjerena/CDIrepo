@@ -30,6 +30,7 @@
 #include "TIMER_FUNC.h"
 #include "MATH_LIB.h"
 #include "IGN_MGMT.h"
+#include "APPLICATION.h"
 
 /* USER CODE END Includes */
 
@@ -94,7 +95,11 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-	systemInitialization();
+	
+	//System Initialization
+	memoryInitialization();	
+	Hardware_Init();
+	
   /* USER CODE END Init */
 
   /* Configure the system clock */
