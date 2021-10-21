@@ -10,6 +10,14 @@
 #include "MATH_LIB.h"
 #include "IO_CONTROL.h"
 
+programSheet request = {0, {{0,0}, {0,0}, {0,0}, {0,0}}};
+programSheet Pulse_Program = { 0, {{0,0}, {0,0}, {0,0}, {0,0}}};
+
+enum Interruption_type int_types=INT_FROM_CH1;
+enum Event_status status=EMPTY;
+enum Engine_States engstates=STOPPED;
+enum engineSpeed pulseMngmt=LOW;
+
 void Cut_Igntion(void)
 {
     if(scenario.Engine_Speed>calibFlashBlock.Calibration_RAM.Max_Engine_Speed)

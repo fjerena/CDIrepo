@@ -1,50 +1,20 @@
 /*
- * GEN_DEF.h
+ * GENERAL_DEF.h
  *
  *  Created on: 13-Jul-2021
  *      Author: Jerena
  */
 
-#ifndef INC_GEN_DEF_H_
-#define INC_GEN_DEF_H_
+#ifndef INC_GENERAL_DEF_H_
+#define INC_GENERAL_DEF_H_
 
 #include "stm32f1xx_hal.h"
 
-#define nSteps                        64u
-#define TDutyTriggerK               1309u     //1.0ms for clock 72MHz
-#define TIntervPulseInv              655u     //0.5ms
-#define TPulseInv                   4582u     //3,5ms
-#define EngineSpeedPeriod_Min     785455u     //100rpm
-#define EngineSpeedPeriod_Max       5236u     //15000rpm
-#define TMR2_16bits                65536u
-#define RPM_const               78545455u
+#define ON    1u
+#define OFF   0u
+#define TRUE  1u
+#define FALSE	0u
 
-#define FALSE                          0u
-#define TRUE                           1u
-#define OFF                            0u
-#define ON                             1u
-
-//Global variable
-enum Interruption_type{INT_FROM_CH1,INT_FROM_CH2,INT_FROM_CH3,INT_FROM_CH4};
-extern enum Interruption_type int_types;
-
-enum Event_status{EMPTY,PROGRAMMED};
-extern enum Event_status status;
-
-enum Engine_States{STOPPED,CRANKING,ACCELERATION,STEADY_STATE,DECELERATION,OVERSPEED};
-extern enum Engine_States engstates;
-
-enum engineSpeed{LOW,HIGH};
-extern enum engineSpeed pulseMngmt;
-
-/*
-2 different speed
-Low  <  1200                                  // fixed advance ignition
-High >= First breakpoint(with restriction %)  // according igntion map
-%Due the sw conception, the first break point must be >= 1200rpm
-Engine Speed: Stopped, Acceleration, Steady State, Decelerate
-Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
-*/
 typedef struct
 {
     uint8_t  sensorAngDisplecement;
@@ -95,19 +65,4 @@ typedef struct system_info
 
 extern volatile system_vars scenario;
 
-typedef struct timerproperty
-{
-    uint32_t counter;
-    uint8_t  timer_program;
-}timer_status;
-
-typedef struct pulseManagement
-{
-    uint8_t engSpeed;
-    timer_status timerCtrl[4];
-}programSheet;
-
-extern programSheet request;
-extern programSheet Pulse_Program;
-	
-#endif /* INC_GEN_DEF_H_ */
+#endif /* INC_GENERAL_DEF_H_ */

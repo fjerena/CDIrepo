@@ -10,7 +10,43 @@
 
 #include "stm32f1xx_hal.h"
 
+#define nSteps                        64u
+#define TDutyTriggerK               1309u     //1.0ms for clock 72MHz
+#define TIntervPulseInv              655u     //0.5ms
+#define TPulseInv                   4582u     //3,5ms
+#define EngineSpeedPeriod_Min     785455u     //100rpm
+#define EngineSpeedPeriod_Max       5236u     //15000rpm
+#define TMR2_16bits                65536u
+#define RPM_const               78545455u
+
 extern TIM_HandleTypeDef htim2;
+
+enum Interruption_type{INT_FROM_CH1,INT_FROM_CH2,INT_FROM_CH3,INT_FROM_CH4};
+extern enum Interruption_type int_types;
+
+enum Event_status{EMPTY,PROGRAMMED};
+extern enum Event_status status;
+
+enum Engine_States{STOPPED,CRANKING,ACCELERATION,STEADY_STATE,DECELERATION,OVERSPEED};
+extern enum Engine_States engstates;
+
+enum engineSpeed{LOW,HIGH};
+extern enum engineSpeed pulseMngmt;
+
+typedef struct timerproperty
+{
+    uint32_t counter;
+    uint8_t  timer_program;
+}timer_status;
+
+typedef struct pulseManagement
+{
+    uint8_t engSpeed;
+    timer_status timerCtrl[4];
+}programSheet;
+
+extern programSheet request;
+extern programSheet Pulse_Program;
 
 void Cut_Igntion(void);
 uint8_t Ignition_nTime(uint16_t eng_speed);

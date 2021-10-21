@@ -161,7 +161,7 @@ def curve_advance():
 def preparation():
     num = str.split(numbers, '\n') 
     result = []
-    result.append(0x7E)
+    result.append(0x7E)    
     z = (int(num[0])).to_bytes(2, byteorder='little')          #investigation
     result.append(int.from_bytes((z[:1]), byteorder='little'))
     result.append(int.from_bytes((z[1:]), byteorder='little'))
@@ -237,16 +237,14 @@ def preparation():
     result.append(0x00)#investigation
 
     checksum = 0
+    checksum = sum(result[:]) & 255
 
-    for n in result:    
-        checksum += n    
-    
-    print(checksum)
-    print(checksum.to_bytes(2, byteorder='little'))
+    print('Checksum value:', checksum)
+    print('Checksum as bytes:', checksum.to_bytes(1, byteorder='little'))
 
-    z = (checksum).to_bytes(2, byteorder='little')
+    z = (checksum).to_bytes(1, byteorder='little')          #investigation
     result.append(int.from_bytes((z[:1]), byteorder='little'))
-
+    
     print(result)    
     frame = bytearray(result)
     print(frame)

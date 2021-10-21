@@ -102,11 +102,16 @@ void receiveData(void)
     uint8_t checksum;
     uint32_t buffer_length;
     uint32_t i;
+	  static uint16_t tamanho;
 
     if(receptstatus == DATA_AVAILABLE_RX_BUFFER)
     {
+				tamanho = blockSize+2;
+			
         buffer_length = sizeof(UART1_rxBuffer);
 
+			  checksum = 0;
+			
         for(i=0;i<buffer_length-1;i++)
         {
             checksum += UART1_rxBuffer[i];
