@@ -12,6 +12,8 @@
 #include "stm32f1xx_hal.h"
 #include "GENERAL_DEF.h"
 
+#define flashAddress 0x0800F000   //bank 60K
+
 //Definition
 enum Transmission_Status{TRANSMITING,TRANSMISSION_DONE};
 extern enum Transmission_Status transmstatus;

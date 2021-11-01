@@ -40,14 +40,7 @@ void Task_Slow(void)
 
 void Running_Scheduller(void)
 {
-		//Update the pulse calc scenario
-    if (scenario.Update_calc == TRUE)
-    {
-        Set_Pulse_Program();
-        scenario.Update_calc = FALSE;
-    }
-
-    //Scheduler
+		//Scheduler
     Periodic_task(  20,&Task_Fast,   array_sched_var, 0);
     Periodic_task( 100,&Task_Medium, array_sched_var, 1);
     Periodic_task(1000,&Task_Slow,   array_sched_var, 2);

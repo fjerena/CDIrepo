@@ -131,6 +131,13 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (TRUE)
   {
+		//Update the pulse calc scenario
+    if (scenario.Update_calc == TRUE)
+    {
+        Set_Pulse_Program();
+        scenario.Update_calc = FALSE;
+    }
+		
     Running_Scheduller();
 
     /* USER CODE END WHILE */

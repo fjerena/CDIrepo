@@ -23,6 +23,8 @@ enum Reception_Status receptstatus=RECEPTION_DONE;
 uint8_t UART1_txBuffer[blockSize+2];
 uint8_t UART1_rxBuffer[blockSize+2];
 uint8_t UART1_rxBufferAlt[11];
+uint32_t refAddress=flashAddress;  //Address that where the calibration will be stored
+
 
 //These function will be available for all modules, but if I don´t declare in header file, compiler will set warning messages
 /*****************************/
@@ -63,12 +65,13 @@ void copyCalibRamToUart(void)
 
 void saveCalibRamToFlash(void)
 {
-	  Flash_Write_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);	  	
+		Flash_Write_Data (refAddress, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);	 
+		//refAddress+=0x2C;
 }
 
 void copyCalibFlashToRam(void)
 {
-    Flash_Read_Data (0x0801FC00, calibFlashBlock.array_Calibration_RAM);
+    Flash_Read_Data (refAddress, calibFlashBlock.array_Calibration_RAM);		
 }
 
 void transmitCalibToUART(void)
@@ -102,13 +105,10 @@ void receiveData(void)
     uint8_t checksum;
     uint32_t buffer_length;
     uint32_t i;
-	  static uint16_t tamanho;
-
+	  
     if(receptstatus == DATA_AVAILABLE_RX_BUFFER)
     {
-				tamanho = blockSize+2;
-			
-        buffer_length = sizeof(UART1_rxBuffer);
+				buffer_length = sizeof(UART1_rxBuffer);
 
 			  checksum = 0;
 			
@@ -121,7 +121,7 @@ void receiveData(void)
         {
             command = UART1_rxBuffer[0];
 
-            switch(command)
+						switch(command)
             {
 								case 0x02:  flgTransmition = ON;
                             break;
@@ -129,7 +129,8 @@ void receiveData(void)
 								case 0x03:  flgTransmition = OFF;
                             break;
 							
-								case 0x47:  saveCalibRamToFlash();
+								case 0x47:  copyCalibUartToRam();	
+									          saveCalibRamToFlash();
 							              break;
 							
                 case 0x69:  transmitCalibToUART();

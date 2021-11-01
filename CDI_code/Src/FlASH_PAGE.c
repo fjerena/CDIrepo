@@ -19,28 +19,27 @@ static uint32_t GetPage(uint32_t Address)
 	  }
   }
 
-  return 696969;
+  return 0xFFFFFFFF;
 }
 
 uint32_t Flash_Write_Data (uint32_t StartPageAddress, uint32_t * DATA_32, uint32_t dataSize)
-{
-
-	static FLASH_EraseInitTypeDef EraseInitStruct;
-	uint32_t PAGEError;
-	int sofar=0;
-
-	//int numberofwords = (strlen((char *)DATA_32)/4) + ((strlen((char *)DATA_32) % 4) != 0);
-	int numberofwords = dataSize;
+{                         
+		 static FLASH_EraseInitTypeDef EraseInitStruct;
+		 uint32_t PAGEError;
+     int sofar=0;
+	
+		 //int numberofwords = (strlen((char *)DATA_32)/4) + ((strlen((char *)DATA_32) % 4) != 0);
+		 int numberofwords = dataSize;
   	
-	  /* Unlock the Flash to enable the flash control register access *************/
+	   /* Unlock the Flash to enable the flash control register access *************/
 	   HAL_FLASH_Unlock();
 
 	   /* Erase the user Flash area*/
 
-	  uint32_t StartPage = GetPage(StartPageAddress);
-	  uint32_t EndPageAdress = StartPageAddress + numberofwords*4;
-	  uint32_t EndPage = GetPage(EndPageAdress);
-
+		 uint32_t StartPage = GetPage(StartPageAddress);
+	   uint32_t EndPageAdress = StartPageAddress + numberofwords*4;
+	   uint32_t EndPage = GetPage(EndPageAdress);
+		
 	   /* Fill EraseInit structure*/
 	   EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
 	   EraseInitStruct.PageAddress = StartPage;
