@@ -24,6 +24,8 @@ void Turn_ON_Int_input(void)
 
 uint32_t adcInputs[4]={0,0,0,0};
 volatile sensors_measur sensors={0,0,0,0,0,0,0,0,0,0,0,0};  //All sensor variable related
+uint16_t voltageArray[12] = {0, 130, 300, 500, 1000, 1400, 1800, 2600, 3000, 3500, 3700, 4020};
+uint8_t temp[12] = {255, 200, 180, 140, 100, 25, 21, 15, 10, 5, 3, 0};
 	
 //Hardware initialization
 void Hardware_Init(void)
@@ -211,8 +213,9 @@ void BatteryVoltage(void)
 
 void EngineTemp(void)
 {
-		sensors.EngineTempRaw=adcInputs[2];
-    sensors.EngineTemp=(sensors.EngineTempRaw*150)/4095;	  
+		sensors.EngineTempRaw=adcInputs[2];	
+	  sensors.EngineTempFilt=Filter16bits(sensors.EngineTempFilt,sensors.EngineTempRaw,100u);
+    sensors.EngineTemp=linearInterpolation(sensors.EngineTempRaw,voltageArray,temp);
 }
 
 void BoardTemp(void)
@@ -230,5 +233,3 @@ void Read_Analog_Sensors(void)
 		EngineTemp();		
 		BoardTemp();		
 }	
-
-

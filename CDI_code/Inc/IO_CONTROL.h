@@ -60,6 +60,4 @@ void EngineTemp(void);
 void BoardTemp(void);
 void Read_Analog_Sensors(void);
 
-
 #endif /* INC_IO_CONTROL_H_ */
-
