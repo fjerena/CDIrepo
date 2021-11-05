@@ -66,52 +66,48 @@ ax.set_ylim(0,12000)
 lines = ax.plot([],[])[0]
 
 canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.get_tk_widget().place(x=10,y=10, width = 500, height = 400)
+#canvas.get_tk_widget().place(x=10,y=10, width = 500, height = 400)
+canvas.get_tk_widget().place(x=350,y=35, width = 500, height = 400)
 canvas.draw()
 
 # Create buttons
 
 root.update()
-#start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: plot_start())
-start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: serial_available())
-start.place(x = 100, y = 450)
+start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: plot_start())
+#start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: serial_available())
+start.place(x = 400, y = 450)
+print("Start the communication")
 
 root.update()
-start = tk.Button(root, text = "Stop", font = ('calibri',12), command = lambda: plot_stop())
-start.place(x = start.winfo_x() + start.winfo_reqwidth() + 200, y = 450)
+start = tk.Button(root, text = "Stop ", font = ('calibri',12), command = lambda: plot_stop())
+start.place(x = start.winfo_x() + start.winfo_reqwidth() + 450, y = 450)
+print("Stop the communication")
 
 # Combobox
 # Label
-ttk.Label(root, text = "Select the Month :", 
+ttk.Label(root, text = "Choose Serial Port:", 
         font = ("Times New Roman", 10)).grid(column = 0, 
         row = 15, padx = 10, pady = 25)
   
 n = tk.StringVar()
-monthchoosen = ttk.Combobox(root, width = 27, 
+monthchoosen = ttk.Combobox(root, width = 10, 
                             textvariable = n)
   
 # Adding combobox drop down list
-monthchoosen['values'] = (' January', 
-                          ' February',
-                          ' March',
-                          ' April',
-                          ' May',
-                          ' June', 
-                          ' July', 
-                          ' August', 
-                          ' September', 
-                          ' October', 
-                          ' November', 
-                          ' December')
+monthchoosen['values'] = ('COM0', 
+                          'COM1',
+                          'COM2',
+                          'COM3',
+                          'COM4')
   
 monthchoosen.grid(column = 1, row = 15)
   
 # Shows february as a default value
-monthchoosen.current(1) 
+monthchoosen.current(0) 
 
 # Start serial port
 
-s = sr.Serial('COM1',9600)
+s = sr.Serial('COM4',9600)
 
 #s = sr.Serial(com_ports.pop(), 9600)
 s.reset_input_buffer()

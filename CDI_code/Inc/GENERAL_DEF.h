@@ -15,6 +15,13 @@
 #define TRUE  1u
 #define FALSE	0u
 
+/*
+I need to include shiftlight trigger event
+Engine Speed limit
+Parameterize the sensor
+
+*/
+
 typedef struct
 {
     uint8_t  sensorAngDisplecement;
@@ -25,6 +32,15 @@ typedef struct
     uint8_t  beta;
     uint8_t  gamma;
 }dataCalibration;  
+
+typedef struct
+{
+		uint16_t maxEngineSpeed;
+		uint8_t  minVoltage;
+	  uint8_t  maxVoltage;
+	  uint8_t  diagCode[8];
+	  uint8_t  resetCause;
+}dataStored;
 
 #define blockSize sizeof (dataCalibration)
 	
