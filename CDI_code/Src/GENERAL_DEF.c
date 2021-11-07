@@ -8,6 +8,9 @@
 #include "GENERAL_DEF.h"
 
 calibrationBlock calibFlashBlock;
+systemInfoBlock sysInfoBlock;
+
+const systemInfoBlock Initial_SystemInfo = {0, 120, 0, 0, 0};
 
 /*
 2 different speed
@@ -31,3 +34,18 @@ const calibrationBlock Initial_Calibration = { 28, 7500,
                                               //64 -> 18 degree, calib_table = 64-ang_obj+18 <-> ang_obj = 64-calib_table+		
 
 volatile system_vars scenario = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+	
+void Set_Diagnose(uint8_t diagnose)
+{
+		sysInfoBlock.systemInfo_RAM.diagCode=(sysInfoBlock.systemInfo_RAM.diagCode|diagnose);
+}	
+
+void Clear_Diagnose(uint8_t diagnose)
+{
+		sysInfoBlock.systemInfo_RAM.diagCode=(sysInfoBlock.systemInfo_RAM.diagCode&(~diagnose));
+}	
+
+void Clear_All_Diagnoses(void)
+{
+		sysInfoBlock.systemInfo_RAM.diagCode=0xFF;		
+}

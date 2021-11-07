@@ -98,9 +98,10 @@ int main(void)
 	
 	//System Initialization
 	memoryInitialization();	
+	resetCauseAnalysis();     //Needs to running after memoryInitialization();
 	Hardware_Init();
 	
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();

@@ -74,6 +74,26 @@ void copyCalibFlashToRam(void)
     Flash_Read_Data (refAddress, calibFlashBlock.array_Calibration_RAM);		
 }
 
+void initializeSysInfoRAM(void)
+{
+    uint32_t i;
+
+    for(i=0;i<sizeof(systemInfo);i++)
+    {
+			  sysInfoBlock.array_systemInfo_RAM_UART[i] = Initial_SystemInfo.array_systemInfo_RAM_UART[i];
+    }
+}
+
+void saveSystemData(void)
+{
+		Flash_Write_Data (0x0800F420, sysInfoBlock.array_systemInfo_RAM, (sizeof(sysInfoBlock.array_systemInfo_RAM))>>2);		
+}
+
+void copySystemInfoFlashToRam(void)
+{
+    Flash_Read_Data (0x0800F420, sysInfoBlock.array_systemInfo_RAM);		
+}
+
 void transmitCalibToUART(void)
 {
     uint32_t i;
@@ -131,6 +151,9 @@ void receiveData(void)
 							
 								case 0x47:  copyCalibUartToRam();	
 									          saveCalibRamToFlash();
+							
+														//On test
+														saveSystemData();
 							              break;
 							
                 case 0x69:  transmitCalibToUART();
@@ -161,6 +184,14 @@ void memoryInitialization(void)
     //Communication
     transmstatus = TRANSMISSION_DONE;
     receptstatus = RECEPTION_DONE;	
+		
+		copySystemInfoFlashToRam();
+		
+		if(sysInfoBlock.systemInfo_RAM.minVoltage == 0u)
+		{	
+				initializeSysInfoRAM();
+				saveSystemData();
+		}		
 }
 
 void transmitSystemInfo(void)

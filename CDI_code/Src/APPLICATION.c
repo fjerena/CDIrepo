@@ -35,7 +35,10 @@ void Task_Medium(void)
 
 void Task_Slow(void)
 {
-	  Engine_STOP_test();
+	  Engine_STOP_test();		
+	
+		//In test
+	  updateSystemData();	
 }
 
 void Running_Scheduller(void)
