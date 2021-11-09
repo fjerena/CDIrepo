@@ -34,6 +34,7 @@ If I put extern in front of the variable that belongs to c file, another modules
 //This is a special case, It was declared in main.c, but I will use in USART_COMM.c and if another module include USART_COMM.h
 //will be available this variable to be use it, like an apropriation...
 extern UART_HandleTypeDef huart1;
+extern uint8_t UART1_txBuffer[6];
 extern uint8_t UART1_rxBuffer[blockSize+2];
 
 //In this case, all modules that include USART_COMM.h, these functions will be available, if they aren´t declared 

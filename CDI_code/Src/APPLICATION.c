@@ -25,11 +25,6 @@ void Task_Medium(void)
     Cut_Igntion();
     receiveData();
 
-    if(flgTransmition)
-    {
-        transmitSystemInfo();
-    }
-
     Statistics();		
 }
 
@@ -39,6 +34,11 @@ void Task_Slow(void)
 	
 		//In test
 	  updateSystemData();	
+	
+		if((flgTransmition)&&(transmstatus!=TRANSMITING))
+    {
+        transmitSystemInfo();
+    }
 }
 
 void Running_Scheduller(void)

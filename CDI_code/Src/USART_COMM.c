@@ -20,9 +20,9 @@
 uint8_t flgTransmition=OFF;
 enum Transmission_Status transmstatus=TRANSMISSION_DONE;
 enum Reception_Status receptstatus=RECEPTION_DONE;
-uint8_t UART1_txBuffer[blockSize+2];
+uint8_t UART1_txBuffer[6];
 uint8_t UART1_rxBuffer[blockSize+2];
-uint8_t UART1_rxBufferAlt[11];
+uint8_t UART1_rxBufferAlt[6];
 uint32_t refAddress=flashAddress;  //Address that where the calibration will be stored
 
 
@@ -194,6 +194,7 @@ void memoryInitialization(void)
 		}		
 }
 
+/*
 void transmitSystemInfo(void)
 {
     uint8_t Mil, Cent, Dez, Unid;
@@ -240,6 +241,48 @@ void transmitSystemInfo(void)
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart1, UART1_rxBufferAlt, sizeof(UART1_rxBufferAlt));
 		}		
+}
+*/
+
+/*
+void transmitSystemInfo(void)
+{
+    UART1_txBuffer[0]='F';
+    UART1_txBuffer[1]='a';
+    UART1_txBuffer[2]='b';
+    UART1_txBuffer[3]='i';
+    UART1_txBuffer[4]='o';
+	  //UART1_txBuffer[5]='J';
+    UART1_txBuffer[5]='\n';
+
+    transmstatus = TRANSMITING;
+    HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));				
+}
+*/
+
+void transmitSystemInfo(void)
+{
+		uint8_t Mil, Cent, Dez, Unid;
+    uint16_t Man, num;
+	  	
+		num = scenario.Engine_Speed;
+	
+		Mil = (num/1000u)+0x30;
+    Man = num%1000u;
+    Cent = (Man/100u)+0x30;
+    Man = Man%100u;
+    Dez = (Man/10u)+0x30;
+    Unid = (Man%10u)+0x30;
+	
+		UART1_txBuffer[0]='S';
+    UART1_txBuffer[1]=Mil;
+    UART1_txBuffer[2]=Cent;
+    UART1_txBuffer[3]=Dez;
+    UART1_txBuffer[4]=Unid;
+    UART1_txBuffer[5]='\n';
+
+    transmstatus = TRANSMITING;
+    HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));				
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
