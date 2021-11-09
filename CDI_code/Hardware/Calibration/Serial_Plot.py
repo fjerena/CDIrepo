@@ -24,14 +24,18 @@ def plot_data():
     global cond, data
 
     if (cond == True):
-        a = s.redline()
+        a = s.readline()
         a.decode()
 
-        if(len(data) < 100):
-            data = np.append(data,float(a[0:4]))
+        if(len(data) < 60):
+            data = np.append(data,float(a[1:5]))
         else:
+            '''
             data[0:99] = data[0:100]
-            data[99] = float(a[0:4])
+            data[99] = float(a[1:5])
+            '''
+            data = np.array([])
+            data = np.append(data,float(a[1:5]))
         lines.set_xdata(np.arange(0,len(data)))
         lines.set_ydata(data)
 
@@ -61,7 +65,7 @@ ax = fig.add_subplot(111)
 ax.set_title('Engine Speed')
 ax.set_xlabel('Sample')
 ax.set_ylabel('RPM')
-ax.set_xlim(0,100)
+ax.set_xlim(0,60)
 ax.set_ylim(0,12000)
 lines = ax.plot([],[])[0]
 
@@ -76,12 +80,10 @@ root.update()
 start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: plot_start())
 #start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: serial_available())
 start.place(x = 400, y = 450)
-print("Start the communication")
 
 root.update()
 start = tk.Button(root, text = "Stop ", font = ('calibri',12), command = lambda: plot_stop())
 start.place(x = start.winfo_x() + start.winfo_reqwidth() + 450, y = 450)
-print("Stop the communication")
 
 # Combobox
 # Label
