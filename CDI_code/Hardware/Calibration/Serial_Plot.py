@@ -16,12 +16,40 @@ cond = False
 # Serial treatment
 def serial_available():
     com_ports = list(ports.comports()) # create a list of com ['COM1','COM2'] 
+    return com_ports
+    '''
     for i in com_ports:            
         print(i.device) # returns 'COMx' 
+    '''
+
+def Connect():
+    global s
+
+    ComName = serialchoosen.get()
+    
+    s = sr.Serial(ComName[0:4],9600)
+    
+    if s.isOpen():
+        print('Connected')
+        s.reset_input_buffer()
+    else:
+        print("Fail")
+
+def Disconnect():
+
+    s.close()
+
+    if s.isOpen():
+        print('Fail, still connected...')
+    else:
+        print("Disconnected")
     
 # Plot data
 def plot_data():
     global cond, data
+
+    if (s.isOpen()):
+        return
 
     if (cond == True):
         a = s.readline()
@@ -85,6 +113,16 @@ root.update()
 start = tk.Button(root, text = "Stop ", font = ('calibri',12), command = lambda: plot_stop())
 start.place(x = start.winfo_x() + start.winfo_reqwidth() + 450, y = 450)
 
+#Connect
+root.update()
+start = tk.Button(root, text = "Connect    ", font = ('calibri',12), command = lambda: Connect())
+start.place(x = 10, y = 55)
+
+#Disconnect
+root.update()
+start = tk.Button(root, text = "Disconnect ", font = ('calibri',12), command = lambda: Disconnect())
+start.place(x = start.winfo_x() + start.winfo_reqwidth() + 10, y = 55)
+
 # Combobox
 # Label
 ttk.Label(root, text = "Choose Serial Port:", 
@@ -92,27 +130,30 @@ ttk.Label(root, text = "Choose Serial Port:",
         row = 15, padx = 10, pady = 25)
   
 n = tk.StringVar()
-monthchoosen = ttk.Combobox(root, width = 10, 
+serialchoosen = ttk.Combobox(root, width = 6, 
                             textvariable = n)
-  
+
+'''  
 # Adding combobox drop down list
-monthchoosen['values'] = ('COM0', 
+serialchoosen['values'] = ('COM0', 
                           'COM1',
                           'COM2',
                           'COM3',
                           'COM4')
+'''
+serialchoosen['values'] = serial_available()
+
+serialchoosen.grid(column = 1, row = 15)
   
-monthchoosen.grid(column = 1, row = 15)
-  
-# Shows february as a default value
-monthchoosen.current(0) 
+# Shows COM0 as a default value
+serialchoosen.current(0) 
 
 # Start serial port
 
-s = sr.Serial('COM4',9600)
+#s = sr.Serial('COM1',9600)
 
 #s = sr.Serial(com_ports.pop(), 9600)
-s.reset_input_buffer()
+#s.reset_input_buffer()
 
 root.after(1,plot_data)
 
