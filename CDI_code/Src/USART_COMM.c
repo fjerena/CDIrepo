@@ -7,6 +7,8 @@
 
 #include "USART_COMM.h"
 #include "FLASH_PAGE.h"
+#include "IGN_MGMT.h"
+#include "main.h"
 
 //Local definition (if I want to share this variables with another modules, I need to include in header file extern + variable name
 /*****************************/
@@ -17,11 +19,13 @@
 /*                           */
 /*****************************/
 
+TIM_IC_InitTypeDef sConfigIC = {0};
 uint8_t flgTransmition=OFF;
 enum Transmission_Status transmstatus=TRANSMISSION_DONE;
 enum Reception_Status receptstatus=RECEPTION_DONE;
 uint8_t UART1_txBuffer[6];
-uint8_t UART1_rxBuffer[blockSize+2];
+uint8_t UART1_rxBuffer[blockSize+1];
+
 uint8_t UART1_rxBufferAlt[6];
 uint32_t refAddress=flashAddress;  //Address that where the calibration will be stored
 
@@ -65,8 +69,7 @@ void copyCalibRamToUart(void)
 
 void saveCalibRamToFlash(void)
 {
-		Flash_Write_Data (refAddress, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);	 
-		//refAddress+=0x2C;
+		Flash_Write_Data (refAddress, calibFlashBlock.array_Calibration_RAM, (sizeof(calibFlashBlock.array_Calibration_RAM))>>2);		
 }
 
 void copyCalibFlashToRam(void)
@@ -192,6 +195,39 @@ void memoryInitialization(void)
 				initializeSysInfoRAM();
 				saveSystemData();
 		}		
+}
+
+void overwriteIntEdgeFromCalib(void)
+{
+		if(calibFlashBlock.Calibration_RAM.Edge==1)
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+		}
+		else
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+		}
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 3;
+		if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+		{
+				Error_Handler();
+		}
+		if(calibFlashBlock.Calibration_RAM.Edge==1)
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+		}
+		else
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+		}
+		sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
+		sConfigIC.ICFilter = 0;
+		if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
+		{
+				Error_Handler();
+		}
 }
 
 /*

@@ -119,6 +119,8 @@ int main(void)
   MX_ADC1_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+	//I will insert the routine to overwrite the interruption edge according FLASH calibration
+	overwriteIntEdgeFromCalib();
 
 	//HAL_ADC_Start_DMA(&hadc1,(uint32_t *)adcInputs,4);
 	HAL_ADC_Start_DMA(&hadc1,adcInputs,4);

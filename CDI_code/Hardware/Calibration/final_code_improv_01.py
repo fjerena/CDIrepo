@@ -39,7 +39,8 @@ def open_serial():
 def min_advance():
     global numbers
     
-    numbers ="""28
+    numbers ="""1
+    28
     15000
     1300
     2000
@@ -73,7 +74,8 @@ def min_advance():
 def middle_advance():
     global numbers
     
-    numbers ="""28
+    numbers ="""1
+    28
     15000
     1300
     2000
@@ -107,7 +109,8 @@ def middle_advance():
 def max_advance():
     global numbers
     
-    numbers ="""28
+    numbers ="""1
+    28
     15000
     1300
     2000
@@ -141,7 +144,8 @@ def max_advance():
 def curve_advance():
     global numbers
     
-    numbers ="""28
+    numbers ="""1
+    28
     15000
     1300
     2000
@@ -175,7 +179,8 @@ def curve_advance():
 def save_curve():
     global numbers
     
-    numbers ="""28
+    numbers ="""1
+    28
     15000
     1300
     2000
@@ -212,18 +217,17 @@ def preparation():
     if selection == 5:
         result.append(0x47) 
     else:
-        result.append(0x7E)    
-    z = (int(num[0])).to_bytes(2, byteorder='little')          #investigation
-    result.append(int.from_bytes((z[:1]), byteorder='little'))
-    result.append(int.from_bytes((z[1:]), byteorder='little'))
-    z = (int(num[1])).to_bytes(2, byteorder='little')
-    result.append(int.from_bytes((z[:1]), byteorder='little'))
-    result.append(int.from_bytes((z[1:]), byteorder='little'))
+        result.append(0x7E)
+    z = (int(num[0])).to_bytes(1, byteorder='little')
+    result.append(int.from_bytes(z, byteorder='little'))
+    z = (int(num[1])).to_bytes(1, byteorder='little')
+    result.append(int.from_bytes(z, byteorder='little'))  
+
     z = (int(num[2])).to_bytes(2, byteorder='little')
-    result.append(int.from_bytes((z[:1]), byteorder='little'))  
+    result.append(int.from_bytes((z[:1]), byteorder='little'))
     result.append(int.from_bytes((z[1:]), byteorder='little'))
     z = (int(num[3])).to_bytes(2, byteorder='little')
-    result.append(int.from_bytes((z[:1]), byteorder='little'))
+    result.append(int.from_bytes((z[:1]), byteorder='little'))  
     result.append(int.from_bytes((z[1:]), byteorder='little'))
     z = (int(num[4])).to_bytes(2, byteorder='little')
     result.append(int.from_bytes((z[:1]), byteorder='little'))
@@ -255,10 +259,12 @@ def preparation():
     z = (int(num[13])).to_bytes(2, byteorder='little')
     result.append(int.from_bytes((z[:1]), byteorder='little'))
     result.append(int.from_bytes((z[1:]), byteorder='little'))
-    z = (int(num[14])).to_bytes(1, byteorder='little')
-    result.append(int.from_bytes(z, byteorder='little'))
+    z = (int(num[14])).to_bytes(2, byteorder='little')
+    result.append(int.from_bytes((z[:1]), byteorder='little'))
+    result.append(int.from_bytes((z[1:]), byteorder='little'))
+    
     z = (int(num[15])).to_bytes(1, byteorder='little')
-    result.append(int.from_bytes(z, byteorder='little'))
+    result.append(int.from_bytes(z, byteorder='little'))  
     z = (int(num[16])).to_bytes(1, byteorder='little')
     result.append(int.from_bytes(z, byteorder='little'))
     z = (int(num[17])).to_bytes(1, byteorder='little')
@@ -285,7 +291,9 @@ def preparation():
     result.append(int.from_bytes(z, byteorder='little'))
     z = (int(num[28])).to_bytes(1, byteorder='little')
     result.append(int.from_bytes(z, byteorder='little'))
-    result.append(0x00)#investigation
+    z = (int(num[29])).to_bytes(1, byteorder='little')
+    result.append(int.from_bytes(z, byteorder='little'))
+    #result.append(0x00)#investigation
 
     checksum = 0
     checksum = sum(result[:]) & 255
@@ -293,8 +301,10 @@ def preparation():
     print('Checksum value:', checksum)
     print('Checksum as bytes:', checksum.to_bytes(1, byteorder='little'))
 
-    z = (checksum).to_bytes(1, byteorder='little')          #investigation
-    result.append(int.from_bytes((z[:1]), byteorder='little'))
+    z = (int(checksum)).to_bytes(1, byteorder='little')          #investigation
+    #result.append(int.from_bytes((z[:1]), byteorder='little'))
+    
+    result.append(int.from_bytes(z, byteorder='little'))
     
     print(result)    
     frame = bytearray(result)
