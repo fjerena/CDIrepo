@@ -32,8 +32,7 @@ void Task_Slow(void)
 {
 	  Engine_STOP_test();		
 	
-		//In test
-	  updateSystemData();	
+		updateSystemData();	
 	
 		if((flgTransmition)&&(transmstatus!=TRANSMITING))
     {
@@ -43,8 +42,7 @@ void Task_Slow(void)
 
 void Running_Scheduller(void)
 {
-		//Scheduler
-    Periodic_task(  20,&Task_Fast,   array_sched_var, 0);
+		Periodic_task(  20,&Task_Fast,   array_sched_var, 0);
     Periodic_task( 100,&Task_Medium, array_sched_var, 1);
     Periodic_task(1000,&Task_Slow,   array_sched_var, 2);
 }

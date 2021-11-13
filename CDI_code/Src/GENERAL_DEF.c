@@ -21,7 +21,7 @@ Engine Speed: Stopped, Acceleration, Steady State, Decelerate
 Engine > Cut_Ignition threshould -> Cut ignition complete in Overspeed
 */
 
-const calibrationBlock Initial_Calibration = { 28, 7500,
+const calibrationBlock Initial_Calibration = { 1, 28, 7500,
 	                                            ////The first Engine Speed value in the array needs to be 1200 or greater than mandatory
                                               { 1300, 2000, 2500, 3000, 3500, 4000, 4500, 7000, 8000, 9000,12000,15000},
                                               //{  64,   64,   64,   64,   64,   64,   64,   64,   64,   64,    64,    64}, 90, 80, 10};

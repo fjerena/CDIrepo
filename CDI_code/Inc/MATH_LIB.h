@@ -9,7 +9,6 @@
 #define INC_MATH_LIB_H_
 
 #include "stm32f1xx_hal.h"
-#include "GENERAL_DEF.h"
 
 uint32_t Saturation(uint32_t var,uint32_t sat);
 uint8_t Filter8bits(uint8_t varOld,uint8_t var,uint8_t k);

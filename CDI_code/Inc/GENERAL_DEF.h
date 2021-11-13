@@ -33,6 +33,7 @@ Parameterize the sensor
 
 typedef struct
 {
+		uint8_t  Edge;
     uint8_t  sensorAngDisplecement;
     uint16_t Max_Engine_Speed;
     uint16_t BP_Engine_Speed[12];

@@ -17,11 +17,7 @@ cond = False
 def serial_available():
     com_ports = list(ports.comports()) # create a list of com ['COM1','COM2'] 
     return com_ports
-    '''
-    for i in com_ports:            
-        print(i.device) # returns 'COMx' 
-    '''
-
+    
 def Connect():
     global s
 
@@ -133,14 +129,7 @@ n = tk.StringVar()
 serialchoosen = ttk.Combobox(root, width = 6, 
                             textvariable = n)
 
-'''  
 # Adding combobox drop down list
-serialchoosen['values'] = ('COM0', 
-                          'COM1',
-                          'COM2',
-                          'COM3',
-                          'COM4')
-'''
 serialchoosen['values'] = serial_available()
 
 serialchoosen.grid(column = 1, row = 15)

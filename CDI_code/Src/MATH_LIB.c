@@ -5,6 +5,7 @@
  *      Author: Jerena
  */
 
+#include "GENERAL_DEF.h"
 #include "MATH_LIB.h"
 
 uint32_t Saturation(uint32_t var,uint32_t sat)
