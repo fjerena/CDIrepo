@@ -330,7 +330,7 @@
         <Mm>
           <WinNumber>4</WinNumber>
           <SubType>256</SubType>
-          <ItemText>0x0800F420</ItemText>
+          <ItemText>0x0800F000</ItemText>
           <AccSizeX>0</AccSizeX>
         </Mm>
       </MemoryWindow4>

@@ -259,6 +259,39 @@ void overwriteIntEdgeFromCalib(void)
 		}
 }
 
+void overwriteIntEdgeFromCalib(void)
+{
+		if(calibFlashBlock.Calibration_RAM.Edge==1)
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+		}
+		else
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+		}
+		sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+		sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+		sConfigIC.ICFilter = 3;
+		if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+		{
+				Error_Handler();
+		}
+		if(calibFlashBlock.Calibration_RAM.Edge==1)
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
+		}
+		else
+		{
+				sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+		}
+		sConfigIC.ICSelection = TIM_ICSELECTION_INDIRECTTI;
+		sConfigIC.ICFilter = 0;
+		if (HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_2) != HAL_OK)
+		{
+				Error_Handler();
+		}
+}
+
 /*
 void transmitSystemInfo(void)
 {
