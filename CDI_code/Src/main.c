@@ -101,6 +101,7 @@ int main(void)
 	memoryInitialization();	
 	resetCauseAnalysis();     //Needs to running after memoryInitialization();
 	Hardware_Init();
+	Variables_Init();
 	
   /* USER CODE END Init */
 

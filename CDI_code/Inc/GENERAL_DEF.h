@@ -10,10 +10,10 @@
 
 #include "stm32f1xx_hal.h"
 
-#define ON    1u
-#define OFF   0u
-#define TRUE  1u
-#define FALSE	0u
+#define ON      0x01
+#define OFF     0x00
+#define TRUE    0x01
+#define FALSE	  0x00
 
 //Diagnostic
 #define fail_0  0x01  // fail_0

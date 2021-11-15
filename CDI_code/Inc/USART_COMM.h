@@ -51,5 +51,6 @@ void transmitSystemInfo(void);
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);
+void Variables_Init(void);
 
 #endif /* INC_USART_COMM_H_ */

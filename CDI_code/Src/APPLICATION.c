@@ -34,10 +34,10 @@ void Task_Slow(void)
 	
 		updateSystemData();	
 	
-		if((flgTransmition)&&(transmstatus!=TRANSMITING))
+		if((flgTransmition==ON)&&(transmstatus!=TRANSMITING))
     {
         transmitSystemInfo();
-    }
+    }	  
 }
 
 void Running_Scheduller(void)

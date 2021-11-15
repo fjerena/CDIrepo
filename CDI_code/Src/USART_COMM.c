@@ -19,8 +19,8 @@
 /*                           */
 /*****************************/
 
-TIM_IC_InitTypeDef sConfigIC = {0};
-uint8_t flgTransmition=OFF;
+TIM_IC_InitTypeDef sConfigIC;
+uint8_t flgTransmition=ON;
 enum Transmission_Status transmstatus=TRANSMISSION_DONE;
 enum Reception_Status receptstatus=RECEPTION_DONE;
 uint8_t UART1_txBuffer[6];
@@ -122,6 +122,39 @@ void transmitCalibToUART(void)
     }
 }
 
+/*
+
+//I need to develop this function!!!
+
+void transmitSystemData(void)
+{
+		uint32_t i;
+    uint8_t checksum;
+    uint32_t buffer_length;
+
+    if(transmstatus == TRANSMISSION_DONE)
+    {
+			
+				buffer_length = sizeof(UART1_txBuffer);
+
+        UART1_txBuffer[0] = 0x7E;
+        checksum = UART1_txBuffer[0];
+
+        for (i=1;i<buffer_length-2;i++)
+        {
+            UART1_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
+            checksum += UART1_txBuffer[i];
+        }
+
+        UART1_txBuffer[buffer_length-1] = checksum;
+        transmstatus = TRANSMITING;
+        HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));
+				
+    }		
+}
+
+*/
+
 void receiveData(void)
 {
     uint8_t command;
@@ -184,17 +217,13 @@ void memoryInitialization(void)
         saveCalibRamToFlash();      
     }
 	  		
-    //Communication
-    transmstatus = TRANSMISSION_DONE;
-    receptstatus = RECEPTION_DONE;	
-		
-		copySystemInfoFlashToRam();
+    copySystemInfoFlashToRam();
 		
 		if(sysInfoBlock.systemInfo_RAM.minVoltage == 0u)
 		{	
 				initializeSysInfoRAM();
 				saveSystemData();
-		}		
+		}			
 }
 
 void overwriteIntEdgeFromCalib(void)
@@ -275,6 +304,7 @@ void transmitSystemInfo(void)
 				UART1_rxBufferAlt[10]=0x0A; // '\n' - Line feed
 
         transmstatus = TRANSMITING;
+
         HAL_UART_Transmit_DMA(&huart1, UART1_rxBufferAlt, sizeof(UART1_rxBufferAlt));
 		}		
 }
@@ -337,4 +367,12 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
     static int8_t k;
 
     k++;
+}
+
+void Variables_Init(void)
+{
+		//Communication
+    transmstatus = TRANSMISSION_DONE;
+    receptstatus = RECEPTION_DONE;	
+		flgTransmition=ON;
 }
