@@ -11,7 +11,7 @@ import serial.tools.list_ports as ports
 
 # Global variables
 data = np.array([])
-cond = False
+cond = True
 
 # Serial treatment
 def serial_available():
@@ -44,14 +44,11 @@ def Disconnect():
 def plot_data():
     global cond, data
 
-    if (s.isOpen()):
-        return
-
     if (cond == True):
         a = s.readline()
         a.decode()
 
-        if(len(data) < 60):
+        if(len(data) < 180):
             data = np.append(data,float(a[1:5]))
         else:
             '''
@@ -66,21 +63,23 @@ def plot_data():
         canvas.draw()
 
     root.after(1,plot_data)
-
+    
 def plot_start():
     global cond
     cond = True
     s.reset_input_buffer()
-
+    print("Started")
+    
 def plot_stop():
     global cond
     cond = False
+    print("Stopped")
 
 # Main gui code
 root = tk.Tk()
 root.title('CDI Tool Calibration')
 root.configure(background = 'light blue')
-root.geometry("900x500") #set the window size
+root.geometry("1500x700") #set the window size
 
 # Create plot object
 # add figure canvas
@@ -89,25 +88,23 @@ ax = fig.add_subplot(111)
 ax.set_title('Engine Speed')
 ax.set_xlabel('Sample')
 ax.set_ylabel('RPM')
-ax.set_xlim(0,60)
+ax.set_xlim(0,180)
 ax.set_ylim(0,12000)
 lines = ax.plot([],[])[0]
 
 canvas = FigureCanvasTkAgg(fig, master=root)
-#canvas.get_tk_widget().place(x=10,y=10, width = 500, height = 400)
-canvas.get_tk_widget().place(x=350,y=35, width = 500, height = 400)
+canvas.get_tk_widget().place(x=150,y=150, width = 1300, height = 600)
 canvas.draw()
 
 # Create buttons
 
 root.update()
 start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: plot_start())
-#start = tk.Button(root, text = "Start", font = ('calibri',12), command = lambda: serial_available())
-start.place(x = 400, y = 450)
+start.place(x = 400, y = 760)
 
 root.update()
 start = tk.Button(root, text = "Stop ", font = ('calibri',12), command = lambda: plot_stop())
-start.place(x = start.winfo_x() + start.winfo_reqwidth() + 450, y = 450)
+start.place(x = start.winfo_x() + start.winfo_reqwidth() + 450, y = 760)
 
 #Connect
 root.update()
@@ -139,13 +136,15 @@ serialchoosen.current(0)
 
 # Start serial port
 
-#s = sr.Serial('COM1',9600)
+s = sr.Serial('COM4',9600)
 
-#s = sr.Serial(com_ports.pop(), 9600)
-#s.reset_input_buffer()
+if s.isOpen():
+        print('Connected')
+        s.reset_input_buffer()
+else:
+        print("Fail")
 
 root.after(1,plot_data)
-
 
 root.mainloop()
 

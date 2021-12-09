@@ -235,9 +235,10 @@ void Engine_STOP_test(void)
         if(scenario.Rising_Edge_Counter == initial_value)
         {
             scenario.Rising_Edge_Counter = 0u;
-            scenario.Engine_Speed = 0u;
-            program = FALSE;
+            scenario.Engine_Speed = 0u;            
         }
+				
+				program = FALSE;
     }
 }
 
