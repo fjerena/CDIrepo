@@ -12,9 +12,12 @@
 #include "USART_COMM.h"
 #include "IGN_MGMT.h"
 
+/* External variables --------------------------------------------------------*/
+extern IWDG_HandleTypeDef hiwdg;
+
 void Task_Fast(void)
 {
-    //HAL_IWDG_Init(&hiwdg);
+    HAL_IWDG_Init(&hiwdg);
 	  Hardware_Test();	
 }
 

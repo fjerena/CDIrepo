@@ -117,14 +117,27 @@ const char * reset_cause_get_name(reset_cause_t reset_cause)
 }
 
 void Cut_Igntion(void)
-{
+{	
+		static uint8_t flagCutoff = OFF;
+	
     if(scenario.Engine_Speed>calibFlashBlock.Calibration_RAM.Max_Engine_Speed)
     {
         scenario.Cutoff_IGN = ON;
+			  flagCutoff = ON;
     }
     else
     {
-        scenario.Cutoff_IGN = OFF;
+			  if(flagCutoff == OFF)
+				{
+						scenario.Cutoff_IGN = OFF;
+				}
+				//The constant 300rpm is the hysteresis, the control will wait Engine Speed (after to overcome te Engine Speed Limit)
+				//decrease more than 300rpm to turnoff the cutoff function and consequently restart the engine combustions
+				else if(scenario.Engine_Speed<(calibFlashBlock.Calibration_RAM.Max_Engine_Speed)-300u)
+				{
+						scenario.Cutoff_IGN = OFF;
+						flagCutoff = OFF;
+				}					
     }
 }
 
