@@ -7,16 +7,14 @@
 *.uvguix.*
 *.lst
 
-#Folder MDK-ARM\RD135EFI
+#Folder MDK-ARM\CDI_do_Jerena
 
 *.axf
 *.crf
 *.d
 *.dep
-*.hex
 *.iex
 *.lnp
-*.map
 *.htm
 *.o
 *.sct

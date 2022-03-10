@@ -1,4 +1,6 @@
-﻿# CDI_do_Jerena - Powerful and calibratable electronic ignition module to optimize internal combustion engine efficiency.
+﻿#Attention: Don´t forget to erase all memory to start to work with bluepill...
+
+# CDI_do_Jerena - Powerful and calibratable electronic ignition module to optimize internal combustion engine efficiency.
 
 The objective this project is build an Electronic Ignition module with satisfactory performance and accuracy, basically integrating low cost electronic circuits/dev boards that can be found easily in online stores like: eBay, AliExpress, DealeXtreme and others using a minimal number of external electronic components.
 
