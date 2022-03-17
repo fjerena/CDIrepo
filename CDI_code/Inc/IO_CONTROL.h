@@ -11,8 +11,8 @@
 #include "stm32f1xx_hal.h"
 #include "GENERAL_DEF.h"
 
-#define V25      200
-#define Avg_Slope 10
+#define V25      150
+#define Avg_Slope  1
 
 extern ADC_HandleTypeDef hadc1;
 
@@ -42,6 +42,11 @@ extern TIM_HandleTypeDef htim4;
 
 void Hardware_Init(void);
 void Hardware_Test(void);
+void ledTest(void);
+void sparkTest(void);
+void manageDignosticLED(void);
+void blinkCommunicationLED(uint8_t nblink);
+void manageCommunicationLED(void);
 void Toggle_LED_Green(void);
 void Set_Output_LED_Green(uint8_t	Value);
 void Toggle_LED_Red(void);

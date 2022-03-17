@@ -57,15 +57,15 @@ void TimerListManagement(timerSchedtype timer_list[])
 uint8_t Timeout_ms(uint8_t Condition,uint32_t *timer,uint32_t period)
 {
     uint8_t TimeoutResp=FALSE;
-
+	  	
     if(Condition==TRUE)
     {
         if(*timer==0)
-        {
-            *timer=HAL_GetTick()+period;
+				{        
+				    *timer=HAL_GetTick()+period;
         }
 
-        if(HAL_GetTick()>=*timer)
+				if(HAL_GetTick()>=*timer)
         {
             TimeoutResp=TRUE;
         }
@@ -75,5 +75,5 @@ uint8_t Timeout_ms(uint8_t Condition,uint32_t *timer,uint32_t period)
 				*timer=0;
     }
 
-    return (TimeoutResp);
+		return (TimeoutResp);
 }

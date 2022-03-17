@@ -18,29 +18,31 @@ extern IWDG_HandleTypeDef hiwdg;
 void Task_Fast(void)
 {
     HAL_IWDG_Init(&hiwdg);
-	  Hardware_Test();	
+	  //Hardware_Test();			
 }
 
 void Task_Medium(void)
 {    
-		Read_Analog_Sensors();
-	
+		Read_Analog_Sensors();	
     Cut_Igntion();
     receiveData();
-
     Statistics();		
+		ledTest();
+		sparkTest();
+		manageCommunicationLED();
 }
 
 void Task_Slow(void)
 {
-	  Engine_STOP_test();		
-	
+	  Engine_STOP_test();			
 		updateSystemData();	
 	
 		if((flgTransmition==ON)&&(transmstatus!=TRANSMITING))
     {
-        transmitSystemInfo();
+				transmitSystemInfo();				
     }	  
+		
+		manageDignosticLED();
 }
 
 void Running_Scheduller(void)

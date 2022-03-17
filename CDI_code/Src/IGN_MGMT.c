@@ -247,8 +247,28 @@ void Engine_STOP_test(void)
     {
         if(scenario.Rising_Edge_Counter == initial_value)
         {
-            scenario.Rising_Edge_Counter = 0u;
-            scenario.Engine_Speed = 0u;            
+					  //It going to clean all scenario struct (system_vars)
+            scenario.Engine_Speed_old=0;
+						scenario.Engine_Speed=0;
+						scenario.engineSpeedPred=0;
+						scenario.engineSpeedFiltered=0;
+						scenario.avarageEngineSpeed=0;
+						scenario.deltaEngineSpeed=0;
+						scenario.Rising_Edge_Counter=0;
+						scenario.triggerEventCounter=0;
+						scenario.inversorEventCounter=0;
+						scenario.Measured_Period=0;
+						scenario.TDuty_Input_Signal=0;
+						scenario.tdutyInputSignalPred=0;
+						scenario.tdutyInputSignalPredLinear=0;
+						scenario.sensorAngDisplecementMeasured=0;
+						scenario.TStep=0;
+						scenario.nAdv=0;
+						scenario.Cutoff_IGN=0;
+						scenario.Update_calc=0;
+						scenario.nOverflow=0;
+						scenario.nOverflow_RE=0;
+						scenario.nOverflow_FE=0;
         }
 				
 				program = FALSE;
@@ -317,6 +337,7 @@ void Rising_Edge_Event(void)
     }
 
     scenario.Rising_Edge_Counter++;
+		Toggle_LED_Red();
 }
 
 void Falling_Edge_Event(void)
@@ -333,7 +354,7 @@ void Falling_Edge_Event(void)
     if (scenario.Rising_Edge_Counter>=2u)
     {
         scenario.Update_calc = TRUE;        //set zero after Engine Stop was detected
-    }
+    }		
 }
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)

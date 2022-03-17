@@ -103,7 +103,6 @@ int main(void)
 	//System Initialization
 	memoryInitialization();	
 	resetCauseAnalysis();     //Needs to running after memoryInitialization();
-	Hardware_Init();
 	Variables_Init();
 	
   /* USER CODE END Init */
@@ -117,6 +116,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+	//Hardware_Init();
   MX_DMA_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
@@ -135,6 +135,8 @@ int main(void)
   HAL_UART_Receive_DMA(&huart1, (uint8_t*)UART1_rxBuffer, sizeof(UART1_rxBuffer));
 	HAL_UART_Transmit_DMA(&huart1, (uint8_t*)UART1_txBuffer, sizeof(UART1_txBuffer));
 	
+	//Hardware initialization
+	Hardware_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */

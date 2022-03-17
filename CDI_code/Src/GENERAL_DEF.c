@@ -47,5 +47,5 @@ void Clear_Diagnose(uint8_t diagnose)
 
 void Clear_All_Diagnoses(void)
 {
-		sysInfoBlock.systemInfo_RAM.diagCode=0xFF;		
+		sysInfoBlock.systemInfo_RAM.diagCode=0x00;  
 }

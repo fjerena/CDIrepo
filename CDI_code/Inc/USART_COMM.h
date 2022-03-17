@@ -23,6 +23,7 @@ extern enum Reception_Status receptstatus;
 ////UART Communication
 //Will be available for all modules that include USART_COMM.h file...
 extern uint8_t flgTransmition;
+extern uint8_t chooseTransmFunc;
 extern enum Transmission_Status transmstatus;
 extern enum Reception_Status receptstatus;
 
@@ -33,7 +34,7 @@ If I put extern in front of the variable that belongs to c file, another modules
 //This is a special case, It was declared in main.c, but I will use in USART_COMM.c and if another module include USART_COMM.h
 //will be available this variable to be use it, like an apropriation...
 extern UART_HandleTypeDef huart1;
-extern uint8_t UART1_txBuffer[6];
+extern uint8_t UART1_txBuffer[57];
 extern uint8_t UART1_rxBuffer[blockSize+1];
 
 //In this case, all modules that include USART_COMM.h, these functions will be available, if they aren´t declared 
@@ -44,10 +45,12 @@ void copyCalibRamToUart(void);
 void saveCalibRamToFlash(void);
 void copyCalibFlashToRam(void);
 void transmitCalibToUART(void);
+void transmitsysInfoBlockToUART(void);
 void receiveData(void);
 void memoryInitialization(void);
 void overwriteIntEdgeFromCalib(void);
 void transmitSystemInfo(void);
+void transmitSystemInfo2(void);
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart);
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart);

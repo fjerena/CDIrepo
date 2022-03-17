@@ -5,10 +5,14 @@
  *      Author: Jerena
  */
 
+
 #include "USART_COMM.h"
 #include "FLASH_PAGE.h"
 #include "IGN_MGMT.h"
 #include "main.h"
+//Running test
+#include <stdio.h>
+#include "IO_CONTROL.h"
 
 //Local definition (if I want to share this variables with another modules, I need to include in header file extern + variable name
 /*****************************/
@@ -20,15 +24,13 @@
 /*****************************/
 
 TIM_IC_InitTypeDef sConfigIC;
-uint8_t flgTransmition=ON;
+uint8_t flgTransmition;
 enum Transmission_Status transmstatus=TRANSMISSION_DONE;
 enum Reception_Status receptstatus=RECEPTION_DONE;
-uint8_t UART1_txBuffer[6];
+uint8_t UART1_txBuffer[57];
 uint8_t UART1_rxBuffer[blockSize+1];
-
-uint8_t UART1_rxBufferAlt[6];
 uint32_t refAddress=flashAddress;  //Address that where the calibration will be stored
-
+char buffer[51];
 
 //These function will be available for all modules, but if I don´t declare in header file, compiler will set warning messages
 /*****************************/
@@ -105,9 +107,15 @@ void transmitCalibToUART(void)
 
     if(transmstatus == TRANSMISSION_DONE)
     {
-        buffer_length = sizeof(UART1_txBuffer);
-
-        UART1_txBuffer[0] = 0x7E;
+        //buffer_length = sizeof(calibFlashBlock.array_Calibration_RAM_UART)+1;
+			  buffer_length = 46;  			
+			
+				for(i=0;i<57;i++)
+				{
+						UART1_txBuffer[i] = 0x00;
+			  }
+			
+        UART1_txBuffer[0] = 0xE7;
         checksum = UART1_txBuffer[0];
 
         for (i=1;i<buffer_length-2;i++)
@@ -122,38 +130,36 @@ void transmitCalibToUART(void)
     }
 }
 
-/*
-
-//I need to develop this function!!!
-
-void transmitSystemData(void)
+void transmitsysInfoBlockToUART(void)
 {
-		uint32_t i;
+    uint32_t i;
     uint8_t checksum;
     uint32_t buffer_length;
 
     if(transmstatus == TRANSMISSION_DONE)
     {
+        //buffer_length = sizeof(sysInfoBlock.array_systemInfo_RAM)+1;
+				buffer_length = 10;
 			
-				buffer_length = sizeof(UART1_txBuffer);
-
-        UART1_txBuffer[0] = 0x7E;
+				for(i=0;i<57;i++)
+				{
+						UART1_txBuffer[i] = 0x00;
+			  }
+			
+        UART1_txBuffer[0] = 0x45;
         checksum = UART1_txBuffer[0];
 
         for (i=1;i<buffer_length-2;i++)
         {
-            UART1_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
+            UART1_txBuffer[i] = sysInfoBlock.array_systemInfo_RAM_UART[i-1];
             checksum += UART1_txBuffer[i];
         }
 
         UART1_txBuffer[buffer_length-1] = checksum;
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));
-				
-    }		
+    }
 }
-
-*/
 
 void receiveData(void)
 {
@@ -180,23 +186,49 @@ void receiveData(void)
 						switch(command)
             {
 								case 0x02:  flgTransmition = ON;
+														blinkCommunicationLED(1);
                             break;
 							
 								case 0x03:  flgTransmition = OFF;
+														blinkCommunicationLED(1);
                             break;
 							
 								case 0x47:  copyCalibUartToRam();	
-									          saveCalibRamToFlash();
-							
-														//On test
-														saveSystemData();
+									          saveCalibRamToFlash();		
+														blinkCommunicationLED(4);
 							              break;
 							
-                case 0x69:  transmitCalibToUART();
-                            break;
+								case 0x50:  Clear_Diagnose(fail_0);
+														blinkCommunicationLED(1);
+														break;
 							
+								case 0x51:  Clear_Diagnose(fail_1);
+														blinkCommunicationLED(1);
+														break;
+							
+								case 0x52:  Clear_All_Diagnoses();					
+														blinkCommunicationLED(2);
+														break;
+							
+								case 0x53:  saveSystemData();              //Record the sysInfoBlock structure to flash
+														blinkCommunicationLED(5);
+														break;	
+
+								case 0x54:  transmitsysInfoBlockToUART();  //Read sysInfoBlock data by rs232
+														blinkCommunicationLED(4);
+														break;
+							
+                case 0x69:  transmitCalibToUART();         //Read the calibration by rs232
+														blinkCommunicationLED(1);
+                            break;								
+													
 							  case 0x7E:  copyCalibUartToRam();
-                            break;              
+														blinkCommunicationLED(3);
+                            break;  
+
+								case 0x7F:  saveCalibRamToFlash();
+														blinkCommunicationLED(1);
+                            break;
 
                 default:    break;
             }
@@ -259,93 +291,36 @@ void overwriteIntEdgeFromCalib(void)
 		}
 }
 
-/*
 void transmitSystemInfo(void)
 {
-    uint8_t Mil, Cent, Dez, Unid;
-    uint16_t Man, num, num1;
-	  uint8_t checksum;
-	  uint32_t i;
+	  /*
+		scenario.Engine_Speed                    //S 6 bytes S12000
+		scenario.engineSpeedPred                 //R 6 bytes R12000
+	  scenario.engineSpeedFiltered;            //F 6 bytes F12000
+	  scenario.nAdv                            //A 4 bytes A064
+	  sensors.VBat                             //B 4 bytes B120
+		sensors.HighVolt                         //H 4 bytes H125
+		sensors.EngineTemp                       //E 4 bytes E021
+	  sensors.TempBoard                        //T 4 bytes T022   
+    scenario.sensorAngDisplecementMeasured;  //N 4 bytes N028
+	  */
+	
+		uint32_t i;
+    uint8_t checksum;
+    uint32_t buffer_length;
 
-    num = scenario.Engine_Speed;
-    num1 = scenario.Engine_Speed;  // only for test purpose DELETE!!!
+    buffer_length = sizeof(UART1_txBuffer);
 
-    if((num<=9999u)&&(num1<=999u))
+		sprintf((char *)UART1_txBuffer,"FA S%0.5u R%0.5u F%0.5u A%0.3u B%0.3u H%0.3u E%0.3u T%0.3u N%0.3u CS",scenario.Engine_Speed,scenario.engineSpeedPred,scenario.engineSpeedFiltered,scenario.nAdv,sensors.VBat,sensors.HighVolt,sensors.EngineTemp,sensors.TempBoard,scenario.sensorAngDisplecementMeasured);
+    
+    checksum = UART1_txBuffer[0];
+
+    for (i=1;i<buffer_length-2;i++)
     {
-        Mil = (num/1000u)+0x30;
-        Man = num%1000u;
-        Cent = (Man/100u)+0x30;
-        Man = Man%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
+				checksum += UART1_txBuffer[i];
+    }
 
-        UART1_rxBufferAlt[0]='R';
-        UART1_rxBufferAlt[1]=Mil;
-        UART1_rxBufferAlt[2]=Cent;
-        UART1_rxBufferAlt[3]=Dez;
-        UART1_rxBufferAlt[4]=Unid;
-        UART1_rxBufferAlt[5]='A';
-
-        Cent = (num1/100u)+0x30;
-        Man = num1%100u;
-        Dez = (Man/10u)+0x30;
-        Unid = (Man%10u)+0x30;
-
-        UART1_rxBufferAlt[6]=Cent;
-        UART1_rxBufferAlt[7]=Dez;
-        UART1_rxBufferAlt[8]=Unid;        
-
-        for(i=0; i < sizeof(UART1_rxBufferAlt)-3; i++)
-				{
-						checksum += UART1_rxBufferAlt[i];
-				}	
-				
-				UART1_rxBufferAlt[9]=checksum; 
-				UART1_rxBufferAlt[10]=0x0A; // '\n' - Line feed
-
-        transmstatus = TRANSMITING;
-
-        HAL_UART_Transmit_DMA(&huart1, UART1_rxBufferAlt, sizeof(UART1_rxBufferAlt));
-		}		
-}
-*/
-
-/*
-void transmitSystemInfo(void)
-{
-    UART1_txBuffer[0]='F';
-    UART1_txBuffer[1]='a';
-    UART1_txBuffer[2]='b';
-    UART1_txBuffer[3]='i';
-    UART1_txBuffer[4]='o';
-	  //UART1_txBuffer[5]='J';
-    UART1_txBuffer[5]='\n';
-
-    transmstatus = TRANSMITING;
-    HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));				
-}
-*/
-
-void transmitSystemInfo(void)
-{
-		uint8_t Mil, Cent, Dez, Unid;
-    uint16_t Man, num;
-	  	
-		num = scenario.Engine_Speed;
-	
-		Mil = (num/1000u)+0x30;
-    Man = num%1000u;
-    Cent = (Man/100u)+0x30;
-    Man = Man%100u;
-    Dez = (Man/10u)+0x30;
-    Unid = (Man%10u)+0x30;
-	
-		UART1_txBuffer[0]='S';
-    UART1_txBuffer[1]=Mil;
-    UART1_txBuffer[2]=Cent;
-    UART1_txBuffer[3]=Dez;
-    UART1_txBuffer[4]=Unid;
-    UART1_txBuffer[5]='\n';
+    UART1_txBuffer[buffer_length-1] = checksum;	
 
     transmstatus = TRANSMITING;
     HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));				
@@ -374,5 +349,5 @@ void Variables_Init(void)
 		//Communication
     transmstatus = TRANSMISSION_DONE;
     receptstatus = RECEPTION_DONE;	
-		flgTransmition=ON;
+		flgTransmition = OFF;		
 }
