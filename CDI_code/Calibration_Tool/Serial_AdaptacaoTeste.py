@@ -11,7 +11,8 @@ import serial.tools.list_ports as ports
 
 # Global variables
 data = np.array([])
-#cond = True
+n=0
+cond = False
 
 # Serial treatment
 def serial_available():
@@ -22,8 +23,8 @@ def Connect():
     global s
 
     ComName = serialchoosen.get()
-        
-    s = sr.Serial(ComName[0:4],9600)
+    ComName = ComName[0:4]
+    s = sr.Serial(ComName,9600,timeout=0.05)
     
     if s.isOpen():
         print('Connected')
@@ -46,10 +47,16 @@ def plot_data():
 
     if (cond == True):
         a = s.readline()
-        a.decode()
+
+        primeira=a.find("S")
+        teste = a[primeira:primeira+5]
+        #teste = a[4:9]
+        #teste = '2000'
+        #a.decode()
 
         if(len(data) < 180):
-            data = np.append(data,float(a[4:9]))
+            #data = np.append(data,float(a[4:9]))
+            data = np.append(data,float(teste))
         else:
             '''
             data[0:99] = data[0:100]
@@ -63,12 +70,13 @@ def plot_data():
 
         canvas.draw()
 
-    root.after(1,plot_data)
+    root.after(1000,plot_data)
     
 def plot_start():
     global cond
     cond = True
     s.reset_input_buffer()
+    plot_data()
     print("Started")
     
 def plot_stop():
@@ -77,8 +85,12 @@ def plot_stop():
     print("Stopped")
 
 # Main gui code
+
 root = tk.Tk()
-root.title('CDI Tool Calibration')
+n=n+1
+print(str(n))
+#root.title('CDI Tool Calibration')
+root.title(str(n))
 root.configure(background = 'light blue')
 root.geometry("1500x700") #set the window size
 
@@ -134,19 +146,7 @@ serialchoosen.grid(column = 1, row = 15)
   
 # Shows COM0 as a default value
 serialchoosen.current(0) 
-
-# Start serial port
-
-s = sr.Serial('COM4',9600)
-
-if s.isOpen():
-        print('Connected')
-        s.reset_input_buffer()
-else:
-        print("Fail")
-
-root.after(1,plot_data)
-
+root.after(1000,plot_data)
 root.mainloop()
 
 

@@ -26,6 +26,7 @@ extern uint8_t flgTransmition;
 extern uint8_t chooseTransmFunc;
 extern enum Transmission_Status transmstatus;
 extern enum Reception_Status receptstatus;
+extern uint8_t comErrorDetected;
 
 /*
 If I put extern in front of the variable that belongs to c file, another modules can access this variables

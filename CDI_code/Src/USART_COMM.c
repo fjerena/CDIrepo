@@ -31,6 +31,7 @@ uint8_t UART1_txBuffer[57];
 uint8_t UART1_rxBuffer[blockSize+1];
 uint32_t refAddress=flashAddress;  //Address that where the calibration will be stored
 char buffer[51];
+uint8_t comErrorDetected;
 
 //These function will be available for all modules, but if I don´t declare in header file, compiler will set warning messages
 /*****************************/
@@ -107,24 +108,30 @@ void transmitCalibToUART(void)
 
     if(transmstatus == TRANSMISSION_DONE)
     {
-        //buffer_length = sizeof(calibFlashBlock.array_Calibration_RAM_UART)+1;
-			  buffer_length = 46;  			
+        buffer_length = sizeof(UART1_txBuffer);
 			
-				for(i=0;i<57;i++)
+				for(i=0;i<buffer_length;i++)
 				{
 						UART1_txBuffer[i] = 0x00;
 			  }
 			
-        UART1_txBuffer[0] = 0xE7;
+        UART1_txBuffer[0] = 0x96;
+				
+				for (i=1;i<45;i++)
+        {
+            UART1_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];            
+        }
+				
         checksum = UART1_txBuffer[0];
 
         for (i=1;i<buffer_length-2;i++)
         {
-            UART1_txBuffer[i] = calibFlashBlock.array_Calibration_RAM_UART[i-1];
             checksum += UART1_txBuffer[i];
         }
 
-        UART1_txBuffer[buffer_length-1] = checksum;
+        UART1_txBuffer[buffer_length-2] = checksum;
+				UART1_txBuffer[buffer_length-1] = '\n';
+				
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));
     }
@@ -138,24 +145,30 @@ void transmitsysInfoBlockToUART(void)
 
     if(transmstatus == TRANSMISSION_DONE)
     {
-        //buffer_length = sizeof(sysInfoBlock.array_systemInfo_RAM)+1;
-				buffer_length = 10;
+        buffer_length = sizeof(UART1_txBuffer);
 			
-				for(i=0;i<57;i++)
+				for(i=0;i<buffer_length;i++)
 				{
 						UART1_txBuffer[i] = 0x00;
 			  }
+				
+				UART1_txBuffer[0] = 0x45;
+				
+				for(i=1;i<9;i++)
+				{
+						UART1_txBuffer[i] = sysInfoBlock.array_systemInfo_RAM_UART[i-1];
+				}
 			
-        UART1_txBuffer[0] = 0x45;
         checksum = UART1_txBuffer[0];
 
         for (i=1;i<buffer_length-2;i++)
         {
-            UART1_txBuffer[i] = sysInfoBlock.array_systemInfo_RAM_UART[i-1];
             checksum += UART1_txBuffer[i];
         }
 
-        UART1_txBuffer[buffer_length-1] = checksum;
+        UART1_txBuffer[buffer_length-2] = checksum;
+				UART1_txBuffer[buffer_length-1] = '\n';
+				
         transmstatus = TRANSMITING;
         HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));
     }
@@ -190,7 +203,7 @@ void receiveData(void)
                             break;
 							
 								case 0x03:  flgTransmition = OFF;
-														blinkCommunicationLED(1);
+														blinkCommunicationLED(2);
                             break;
 							
 								case 0x47:  copyCalibUartToRam();	
@@ -203,11 +216,11 @@ void receiveData(void)
 														break;
 							
 								case 0x51:  Clear_Diagnose(fail_1);
-														blinkCommunicationLED(1);
+														blinkCommunicationLED(2);
 														break;
 							
 								case 0x52:  Clear_All_Diagnoses();					
-														blinkCommunicationLED(2);
+														blinkCommunicationLED(3);
 														break;
 							
 								case 0x53:  saveSystemData();              //Record the sysInfoBlock structure to flash
@@ -215,7 +228,7 @@ void receiveData(void)
 														break;	
 
 								case 0x54:  transmitsysInfoBlockToUART();  //Read sysInfoBlock data by rs232
-														blinkCommunicationLED(4);
+														blinkCommunicationLED(3);
 														break;
 							
                 case 0x69:  transmitCalibToUART();         //Read the calibration by rs232
@@ -227,7 +240,7 @@ void receiveData(void)
                             break;  
 
 								case 0x7F:  saveCalibRamToFlash();
-														blinkCommunicationLED(1);
+														blinkCommunicationLED(2);
                             break;
 
                 default:    break;
@@ -294,15 +307,18 @@ void overwriteIntEdgeFromCalib(void)
 void transmitSystemInfo(void)
 {
 	  /*
-		scenario.Engine_Speed                    //S 6 bytes S12000
-		scenario.engineSpeedPred                 //R 6 bytes R12000
-	  scenario.engineSpeedFiltered;            //F 6 bytes F12000
-	  scenario.nAdv                            //A 4 bytes A064
-	  sensors.VBat                             //B 4 bytes B120
-		sensors.HighVolt                         //H 4 bytes H125
-		sensors.EngineTemp                       //E 4 bytes E021
-	  sensors.TempBoard                        //T 4 bytes T022   
-    scenario.sensorAngDisplecementMeasured;  //N 4 bytes N028
+		To identify the frame "  " (two spaces)  //  2 char
+		scenario.Engine_Speed                    //S 7 char "S12000 "
+		scenario.engineSpeedPred                 //R 7 char "S12100 "
+	  scenario.engineSpeedFiltered;            //F 7 char "S12050 "
+	  scenario.nAdv                            //A 5 char "A064 "
+	  sensors.VBat                             //B 5 char "B120 "
+		sensors.HighVolt                         //H 5 char "H125 "
+		sensors.EngineTemp                       //E 5 char "E021 "
+	  sensors.TempBoard                        //T 5 char "T022 "   
+    scenario.sensorAngDisplecementMeasured;  //N 5 char "N028 "
+	  last " "	(space   )    								 //  1 char 
+		ID + 54 char + checksum + \n (new line)
 	  */
 	
 		uint32_t i;
@@ -311,8 +327,9 @@ void transmitSystemInfo(void)
 
     buffer_length = sizeof(UART1_txBuffer);
 
-		sprintf((char *)UART1_txBuffer,"FA S%0.5u R%0.5u F%0.5u A%0.3u B%0.3u H%0.3u E%0.3u T%0.3u N%0.3u CS",scenario.Engine_Speed,scenario.engineSpeedPred,scenario.engineSpeedFiltered,scenario.nAdv,sensors.VBat,sensors.HighVolt,sensors.EngineTemp,sensors.TempBoard,scenario.sensorAngDisplecementMeasured);
-    
+		sprintf((char *)UART1_txBuffer,"  S%0.5u R%0.5u F%0.5u A%0.3u B%0.3u H%0.3u E%0.3u T%0.3u N%0.3u ",scenario.Engine_Speed,scenario.engineSpeedPred,scenario.engineSpeedFiltered,scenario.nAdv,sensors.VBat,sensors.HighVolt,sensors.EngineTemp,sensors.TempBoard,scenario.sensorAngDisplecementMeasured);
+    UART1_txBuffer[0] = 0xFA;
+		
     checksum = UART1_txBuffer[0];
 
     for (i=1;i<buffer_length-2;i++)
@@ -320,7 +337,8 @@ void transmitSystemInfo(void)
 				checksum += UART1_txBuffer[i];
     }
 
-    UART1_txBuffer[buffer_length-1] = checksum;	
+    UART1_txBuffer[buffer_length-2] = checksum;	
+		UART1_txBuffer[buffer_length-1] = '\n';		
 
     transmstatus = TRANSMITING;
     HAL_UART_Transmit_DMA(&huart1, UART1_txBuffer, sizeof(UART1_txBuffer));				
@@ -339,9 +357,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    static int8_t k;
-
-    k++;
+    comErrorDetected++;
+		Set_Diagnose(fail_4);
 }
 
 void Variables_Init(void)
@@ -349,5 +366,6 @@ void Variables_Init(void)
 		//Communication
     transmstatus = TRANSMISSION_DONE;
     receptstatus = RECEPTION_DONE;	
-		flgTransmition = OFF;		
+		flgTransmition = OFF;	
+		comErrorDetected = 0;
 }
