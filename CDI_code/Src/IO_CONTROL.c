@@ -254,6 +254,11 @@ void Toggle_LED_Green(void)
 		HAL_GPIO_TogglePin(GPIOC,GPIO_PIN_13);
 }
 
+void BlinkLEDEcuAlive(void)
+{
+		Toggle_LED_Green();
+}
+
 void Set_Output_LED_Green(uint8_t	Value)
 {
 		if(Value==ON)

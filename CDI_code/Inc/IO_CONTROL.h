@@ -48,6 +48,7 @@ void manageDignosticLED(void);
 void blinkCommunicationLED(uint8_t nblink);
 void manageCommunicationLED(void);
 void Toggle_LED_Green(void);
+void BlinkLEDEcuAlive(void);
 void Set_Output_LED_Green(uint8_t	Value);
 void Toggle_LED_Red(void);
 void Set_Output_LED_Red(uint8_t	Value);

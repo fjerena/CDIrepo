@@ -43,6 +43,7 @@ void Task_Slow(void)
     }	  
 		
 		manageDignosticLED();
+		BlinkLEDEcuAlive();
 }
 
 void Running_Scheduller(void)
