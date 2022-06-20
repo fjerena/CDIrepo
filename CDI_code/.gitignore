@@ -9,7 +9,7 @@
 
 #Folder MDK-ARM\CDI_do_Jerena
 
-*.axf
+#*.axf
 *.crf
 *.d
 *.dep
