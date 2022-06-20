@@ -10,7 +10,7 @@
 calibrationBlock calibFlashBlock;
 systemInfoBlock sysInfoBlock;
 
-const systemInfoBlock Initial_SystemInfo = {0, 120, 0, 0, 0};
+const systemInfoBlock Initial_SystemInfo = {0, 255, 0, 0, 0};
 
 /*
 2 different speed

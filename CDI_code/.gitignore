@@ -9,7 +9,8 @@
 
 #Folder MDK-ARM\CDI_do_Jerena
 
-#*.axf
+#I commented the file *.axf because I can use this file to flash CDI by Keil
+
 *.crf
 *.d
 *.dep

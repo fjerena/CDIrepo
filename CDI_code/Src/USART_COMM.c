@@ -246,7 +246,6 @@ void receiveData(void)
 
 								case 0x7F:  saveCalibRamToFlash();
 														blinkCommunicationLED(2);
-
                             break;
 
 								case 0x80:  NVIC_SystemReset();
