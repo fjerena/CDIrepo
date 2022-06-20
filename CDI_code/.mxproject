@@ -7,8 +7,8 @@ HeaderPath=..\Drivers\STM32F1xx_HAL_Driver\Inc;..\Drivers\STM32F1xx_HAL_Driver\I
 CDefines=USE_HAL_DRIVER;STM32F103xB;USE_HAL_DRIVER;USE_HAL_DRIVER;
 
 [PreviousGenFiles]
-HeaderPath=C:/temp/BACKUP/CDI_Development/Code/CDIrepo/CDI_code/Inc
+HeaderPath=C:/Repositorio/CDIrepo/CDI_code/Inc
 HeaderFiles=stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;
-SourcePath=C:/temp/BACKUP/CDI_Development/Code/CDIrepo/CDI_code/Src
+SourcePath=C:/Repositorio/CDIrepo/CDI_code/Src
 SourceFiles=stm32f1xx_it.c;stm32f1xx_hal_msp.c;main.c;
 

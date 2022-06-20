@@ -33,7 +33,7 @@ uint32_t refAddress=flashAddress;  //Address that where the calibration will be 
 char buffer[51];
 uint8_t comErrorDetected;
 
-//These function will be available for all modules, but if I don´t declare in header file, compiler will set warning messages
+//These function will be available for all modules, but if I donï¿½t declare in header file, compiler will set warning messages
 /*****************************/
 /*                           */
 /*  Function definition      */
@@ -230,17 +230,27 @@ void receiveData(void)
 								case 0x54:  transmitsysInfoBlockToUART();  //Read sysInfoBlock data by rs232
 														blinkCommunicationLED(3);
 														break;
+
+								case 0x55:  initializeSysInfoRAM();        //Reset SystemInfo block on FLASH
+				                    saveSystemData();
+														blinkCommunicationLED(2);
+														break;
 							
                 case 0x69:  transmitCalibToUART();         //Read the calibration by rs232
 														blinkCommunicationLED(1);
                             break;								
 													
-							  case 0x7E:  copyCalibUartToRam();
+							 	case 0x7E:  copyCalibUartToRam();
 														blinkCommunicationLED(3);
                             break;  
 
 								case 0x7F:  saveCalibRamToFlash();
 														blinkCommunicationLED(2);
+
+                            break;
+
+								case 0x80:  NVIC_SystemReset();
+														blinkCommunicationLED(3);														
                             break;
 
                 default:    break;

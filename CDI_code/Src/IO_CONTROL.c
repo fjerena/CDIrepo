@@ -42,6 +42,9 @@ void Hardware_Init(void)
     Set_Output_LED_Yellow(OFF);    
 		Set_Ouput_Inversor(OFF);
 		Set_Ouput_Trigger(OFF);
+	
+		//Temporary (PA8 - VRS sensor) defined as output and set to zero
+		HAL_GPIO_WritePin(GPIOA,GPIO_PIN_8,GPIO_PIN_RESET);		
 }
 
 void Hardware_Test(void)
